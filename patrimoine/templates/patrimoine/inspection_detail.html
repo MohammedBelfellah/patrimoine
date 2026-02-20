@@ -44,51 +44,90 @@
   {% if modification_requests %}
   <div style="margin-top: 24px;">
     <h3>Historique des demandes de modification</h3>
+    <style>
+      .modification-item { border-left: 4px solid; border-radius: 6px; margin-bottom: 12px; }
+      .modification-header { padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+      .modification-header:hover { opacity: 0.85; }
+      .modification-header-info { font-weight: 600; font-size: 0.95rem; }
+      .modification-content { padding: 0 16px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+      .modification-content.show { max-height: 600px; padding: 12px 16px; }
+    </style>
+
     {% for req in modification_requests %}
-    <div style="border: 2px solid {% if req.status == 'PENDING' %}#ca8a04{% elif req.status == 'APPROVED' %}#059669{% else %}#dc2626{% endif %}; border-radius: 8px; padding: 16px; margin-bottom: 16px; background: {% if req.status == 'PENDING' %}#fef9c3{% elif req.status == 'APPROVED' %}#d1fae5{% else %}#fee2e2{% endif %};">
-      <div style="display: flex; justify-content: space-between; align-items: start;">
-        <div>
-          <strong style="color: {% if req.status == 'PENDING' %}#854d0e{% elif req.status == 'APPROVED' %}#065f46{% else %}#991b1b{% endif %};">
-            {{ req.get_status_display }} - Demandée le {{ req.requested_at|date:"d/m/Y H:i" }}
-          </strong>
-          <p style="margin-top: 4px; color: #666;"><small>Par: {{ req.requested_by.email }}</small></p>
+    <div class="modification-item" style="background: {% if req.status == 'PENDING' %}#fef9c3{% elif req.status == 'APPROVED' %}#d1fae5{% else %}#fee2e2{% endif %}; border-left-color: {% if req.status == 'PENDING' %}#ca8a04{% elif req.status == 'APPROVED' %}#059669{% else %}#dc2626{% endif %};">
+      
+      <!-- Collapsible Header -->
+      <div class="modification-header" onclick="this.nextElementSibling.classList.toggle('show'); this.querySelector('.toggle-icon').textContent = this.nextElementSibling.classList.contains('show') ? '▼' : '▶';">
+        <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+          <span class="toggle-icon" style="color: #666; font-size: 0.8rem;">▶</span>
+          <div>
+            <div class="modification-header-info" style="color: {% if req.status == 'PENDING' %}#854d0e{% elif req.status == 'APPROVED' %}#065f46{% else %}#991b1b{% endif %};">
+              {% if req.status == 'PENDING' %}⏳{% elif req.status == 'APPROVED' %}✅{% else %}❌{% endif %}
+              {{ req.get_status_display }}
+            </div>
+            <div style="font-size: 0.85rem; color: #666; margin-top: 2px;">
+              Demandée le {{ req.requested_at|date:"d/m/Y H:i" }} par {{ req.requested_by.email }}
+            </div>
+          </div>
         </div>
+        <span style="color: #999; font-size: 0.9rem;">{{ req.proposed_data.etat }}</span>
+      </div>
+
+      <!-- Expandable Content -->
+      <div class="modification-content">
+        <!-- Proposed Changes -->
+        <div style="background: white; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+          <strong style="color: #1f2937; font-size: 0.95rem; display: block; margin-bottom: 8px;">Changements proposés:</strong>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; font-size: 0.9rem;">
+            <div>
+              <strong style="color: #4b5563;">Date:</strong>
+              <p style="margin: 4px 0; color: #1f2937;">{{ req.proposed_data.date_inspection }}</p>
+            </div>
+            <div>
+              <strong style="color: #4b5563;">État:</strong>
+              <p style="margin: 4px 0; color: #1f2937;">{{ req.proposed_data.etat }}</p>
+            </div>
+            {% if req.proposed_data.observations %}
+            <div>
+              <strong style="color: #4b5563;">Observations:</strong>
+              <p style="margin: 4px 0; color: #1f2937;">{{ req.proposed_data.observations }}</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Admin Actions (Approval/Rejection) -->
         {% if req.status == 'PENDING' and is_admin %}
-        <div style="display: flex; gap: 8px;">
-          <form method="post" action="{% url 'inspection-request-approve' req.id_request %}" style="display: inline;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: white; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+          
+          <!-- Approve Form -->
+          <form method="post" action="{% url 'inspection-request-approve' req.id_request %}" style="display: flex; flex-direction: column; gap: 6px;">
             {% csrf_token %}
-            <label style="font-size: 12px;">Note (optionnel):</label>
-            <input type="text" name="admin_note" placeholder="Note admin..." style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; margin-right: 8px;">
-            <button type="submit" class="btn btn-success" onclick="return confirm('Approuver cette modification?');">✅ Approuver</button>
+            <label style="font-size: 0.85rem; font-weight: 600; color: #1f2937;">Note (optionnel):</label>
+            <input type="text" name="admin_note" placeholder="Note..." style="padding: 6px 8px; border: 1px solid #d8dee6; border-radius: 4px; font-size: 0.85rem;">
+            <button type="submit" style="padding: 8px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem;" onclick="return confirm('Approuver?');">✅ Approuver</button>
           </form>
-          <form method="post" action="{% url 'inspection-request-reject' req.id_request %}" style="display: inline;">
+
+          <!-- Reject Form -->
+          <form method="post" action="{% url 'inspection-request-reject' req.id_request %}" style="display: flex; flex-direction: column; gap: 6px;">
             {% csrf_token %}
-            <input type="text" name="admin_note" placeholder="Raison du rejet..." style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; margin-right: 8px;">
-            <button type="submit" class="btn btn-danger" onclick="return confirm('Rejeter cette modification?');">❌ Rejeter</button>
+            <label style="font-size: 0.85rem; font-weight: 600; color: #1f2937;">Raison:</label>
+            <input type="text" name="admin_note" placeholder="Raison..." style="padding: 6px 8px; border: 1px solid #d8dee6; border-radius: 4px; font-size: 0.85rem;">
+            <button type="submit" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem;" onclick="return confirm('Rejeter?');">🗑️ Rejeter</button>
           </form>
         </div>
         {% endif %}
-      </div>
 
-      <div style="margin-top: 12px; background: white; padding: 12px; border-radius: 4px;">
-        <strong>Changements proposés:</strong>
-        <ul style="margin: 8px 0; padding-left: 20px;">
-          <li><strong>Date:</strong> {{ req.proposed_data.date_inspection }}</li>
-          <li><strong>État:</strong> {{ req.proposed_data.etat }}</li>
-          {% if req.proposed_data.observations %}
-          <li><strong>Observations:</strong> {{ req.proposed_data.observations }}</li>
+        <!-- Review Info (if already reviewed) -->
+        {% if req.reviewed_by %}
+        <div style="background: white; padding: 12px; border-radius: 4px; border-left: 2px solid #d8dee6; font-size: 0.9rem;">
+          <strong style="color: #4b5563;">Examiné par {{ req.reviewed_by.email }} le {{ req.reviewed_at|date:"d/m/Y H:i" }}</strong>
+          {% if req.admin_note %}
+          <p style="margin-top: 6px; color: #666;">{{ req.admin_note }}</p>
           {% endif %}
-        </ul>
-      </div>
-
-      {% if req.reviewed_by %}
-      <div style="margin-top: 12px; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px;">
-        <p><strong>Examiné par:</strong> {{ req.reviewed_by.email }} le {{ req.reviewed_at|date:"d/m/Y H:i" }}</p>
-        {% if req.admin_note %}
-        <p><strong>Note admin:</strong> {{ req.admin_note }}</p>
+        </div>
         {% endif %}
       </div>
-      {% endif %}
     </div>
     {% endfor %}
   </div>

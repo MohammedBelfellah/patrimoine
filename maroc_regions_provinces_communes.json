@@ -1,0 +1,465 @@
+{
+  "pays": "Maroc",
+  "decoupage": "2015",
+  "regions": [
+    {
+      "id": 1,
+      "nom": "Tanger-Tétouan-Al Hoceïma",
+      "chef_lieu": "Tanger",
+      "provinces_prefectures": [
+        {
+          "nom": "Préfecture de Tanger-Assilah",
+          "type": "préfecture",
+          "communes": ["Tanger", "Assilah", "Ain Dalia", "Ain Hachem", "Ain Mediouna", "Anjra", "Bni Harchane", "Bni Khalid", "Bni Leit", "Charf Lakbir", "Dar Chaoui", "Fnidek", "Gzenaya", "Jouamaa", "Ksar Sghir", "Laouamra", "Melloussa", "Oued Laou", "Sahel", "Sidi Driss", "Souk Kdim", "Tighremt", "Tlat Taghramt", "Zinat"]
+        },
+        {
+          "nom": "Préfecture de M'diq-Fnideq",
+          "type": "préfecture",
+          "communes": ["M'diq", "Fnideq", "Restinga-Smir", "Martil", "Mallaliyine"]
+        },
+        {
+          "nom": "Province de Tétouan",
+          "type": "province",
+          "communes": ["Tétouan", "Ain Lahsan", "Ain Zerouala", "Azla", "Bab Taza", "Bni Idder", "Bni Leit", "Dar Ben Karriche", "El Hamra", "Fifi", "Khemis Anjra", "Mazouzen", "Oued Laou", "Ouled Ali", "Reggada", "Sahel", "Saddina", "Tiguissas", "Tleta Rissana"]
+        },
+        {
+          "nom": "Province de Fahs-Anjra",
+          "type": "province",
+          "communes": ["Ain Dalia", "Anjra", "Briech", "Dar Chaoui", "El Bahraouiyne", "Gzenaya", "Jouamaa", "Ksar Sghir", "Melloussa", "Souk Kdim", "Zinat"]
+        },
+        {
+          "nom": "Province de Larache",
+          "type": "province",
+          "communes": ["Larache", "Ksar El Kébir", "Zouada", "Ard Lakhdar", "Bni Guerfet", "Bni Issef", "Bni Arouss", "Dar El Hamra", "Had Rmel", "Laouamra", "Moulay Bousselham", "Rissana Chamalia", "Rissana Janoubia", "Sahel", "Souk Tlet Oulad Moussa", "Tatoft", "Zghira"]
+        },
+        {
+          "nom": "Province d'Al Hoceïma",
+          "type": "province",
+          "communes": ["Al Hoceïma", "Abdelghaya Souahel", "Ait Youssef Ou Ali", "Ajdir", "Bni Ammart", "Bni Bouayach", "Bni Gmil", "Bouadel", "Ibeqquyen", "Imrabten", "Itzer", "Ketama", "Rouadi", "Sidi Abid", "Snada", "Targuist", "Timezgana", "Tizi Ouasli"]
+        },
+        {
+          "nom": "Province de Chefchaouen",
+          "type": "province",
+          "communes": ["Chefchaouen", "Ain Tissimane", "Amtar", "Bab Berred", "Bab Taza", "Bni Derkoul", "Bni Rzine", "Bni Selmane", "Dardara", "El Adeggane", "El Kella", "Fifi", "Imouzer Marmoucha", "Mokrisset", "Ouled Ali", "Oulad Jabeur", "Steha", "Talembote", "Tanakoub", "Tarsif", "Tlata Taghramt"]
+        },
+        {
+          "nom": "Province de Ouezzane",
+          "type": "province",
+          "communes": ["Ouezzane", "Ain Beida", "Ain Ghaibiya", "Bni Ahmed Gharbia", "Bni Ahmed Mashrouia", "Bni Mansour", "Bni Yahmed Riah", "Fifi", "Mastass", "Moghayet", "Rjiouat", "Sarsar", "Sidi Redouane", "Souk Tlet Oulad Moussa", "Zghira"]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "nom": "L'Oriental",
+      "chef_lieu": "Oujda",
+      "provinces_prefectures": [
+        {
+          "nom": "Préfecture d'Oujda-Angad",
+          "type": "préfecture",
+          "communes": ["Oujda", "Bni Drar", "Naïma", "Ahl Angad", "Aïn Sfa", "Bni Khaled", "Labssara", "Isly", "Mestferki", "Sidi Bouleanouar", "Sidi Moussa Lamhaya"]
+        },
+        {
+          "nom": "Province de Berkane",
+          "type": "province",
+          "communes": ["Ahfir", "Aïn Reggada", "Aklim", "Berkane", "Saïdia", "Sidi Slimane Charaa", "Aghbal", "Fezouane", "Laâtamna", "Madagh", "Boughriba", "Chouihia", "Rhislane", "Sidi Bouhria", "Tafoghalt", "Zegzel"]
+        },
+        {
+          "nom": "Province de Driouch",
+          "type": "province",
+          "communes": ["Ben Taïb", "Driouch", "Midar", "Aïn Zohra", "Aït Maït", "Amejaou", "Dar El Kabdani", "Mtalssa", "Oulad Boubker", "Tazarhine", "Tlat Azlef", "Bni Marghnin", "Boudinar", "Iferni", "Ijermaouss", "M'hajer", "Ouardana", "Oulad Amghar", "Taferssite", "Talilit", "Temsamane", "Trougout", "Tsaft"]
+        },
+        {
+          "nom": "Province de Figuig",
+          "type": "province",
+          "communes": ["Bouârfa", "Figuig", "Aïn Chouater", "Bni Tadjite", "Bouanane", "Bouchaouene", "Boumerieme", "Talssint", "Aïn Chaïr", "Abbou Lakhal", "Bni Guil", "Maâtarka", "Tendrara"]
+        },
+        {
+          "nom": "Province de Guercif",
+          "type": "province",
+          "communes": ["Guercif", "Assebbab", "Barkine", "Houara Oulad Raho", "Lamrija", "Saka", "Mazguitam", "Oulad Bourima", "Ras Laksar", "Taddart"]
+        },
+        {
+          "nom": "Province de Jerada",
+          "type": "province",
+          "communes": ["Aïn Beni Mathar", "Jerada", "Touissit", "Gafait", "Guenfouda", "Laouinate", "Labkhata", "Ras Asfour", "Sidi Boubker", "Tiouli", "Beni Mathar", "Mrija", "Oulad Ghziyel", "Sidi Abdelhakem"]
+        },
+        {
+          "nom": "Province de Nador",
+          "type": "province",
+          "communes": ["El Aroui", "Beni Ansar", "Nador", "Zaïo", "Zeghanghane", "Ras El Ma", "Selouane", "Beni Bouifrour", "Beni Cheker", "Bni Sidel Jbel", "Bni Sidel Louta", "Bouareg", "Iaazzanene", "Ihddadene", "Iksane", "Afsou", "Al Barkanyene", "Arekmane", "Bni Oukil Oulad M'hand", "Hassi Berkane", "Oulad Daoud Zkhanine", "Oulad Settout", "Tiztoutine"]
+        },
+        {
+          "nom": "Province de Taourirt",
+          "type": "province",
+          "communes": ["Debdou", "Sidi El Aoun Mellouk", "Taourirt", "El Atef", "Oulad M'hammed", "Sidi Ali Belqassem", "Sidi Lahcen", "Aïn Lahjer", "Machraâ Hammadi", "Mestegmer", "Tancherfi", "Ahl Oued Za", "Gtiter", "Melg El Ouidane"]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "nom": "Fès-Meknès",
+      "chef_lieu": "Fès",
+      "provinces_prefectures": [
+        {
+          "nom": "Préfecture de Fès",
+          "type": "préfecture",
+          "communes": ["Fès", "Aïn Bida", "Aïn Chkef", "Aïn Karma", "Aïn Orma", "Bhalil", "El Menzel", "Mhaya", "Nzalat Bni Amar", "Oulad Tayeb", "Sefrou", "Sidi Harazem"]
+        },
+        {
+          "nom": "Préfecture de Meknès",
+          "type": "préfecture",
+          "communes": ["Meknès", "Aïn Jemaa", "Aïn Karma", "Aïn Orma", "Bni Yahmed", "Dar Bni Karrich", "El Hajeb", "Itzer", "Ouislane", "Sidi Slimane Moulay Bouchta", "Zouagha"]
+        },
+        {
+          "nom": "Province de Boulemane",
+          "type": "province",
+          "communes": ["Boulemane", "Aït Bazza", "Aït Seghrouchen", "Almis Marmoucha", "El Mers", "Guigou", "Immouzer Marmoucha", "Missour", "Ouled Ali Youssef", "Outat El Haj", "Skoura", "Talzemt"]
+        },
+        {
+          "nom": "Province d'El Hajeb",
+          "type": "province",
+          "communes": ["El Hajeb", "Agourai", "Aïn Taoujdate", "Ait Nour", "El Aïoun", "Hammou Ait Aissa", "Itzer", "Sebaa Aiyoun", "Skoura Mdiq", "Timahdite"]
+        },
+        {
+          "nom": "Province d'Ifrane",
+          "type": "province",
+          "communes": ["Ifrane", "Aïn Leuh", "Azrou", "Dayet Aoua", "El Hajeb", "Mrirt", "Sefrou", "Timahdite"]
+        },
+        {
+          "nom": "Province de Moulay Yacoub",
+          "type": "province",
+          "communes": ["Aïn Bou Ali", "Aïn Chkef", "Aïn Kansra", "Aïn Louh", "Ain Timguenai", "El Menzel", "El Mers", "Mkansa", "Moulay Yacoub", "Nzalat Bni Amar", "Oulad Mkoudou", "Sebt Loudaya", "Sidi Harazem", "Zouagha"]
+        },
+        {
+          "nom": "Province de Sefrou",
+          "type": "province",
+          "communes": ["Sefrou", "Adrej", "Ahl Sidi Lahcen", "Aïn Cheggag", "Aïn Timguenai", "Bhalil", "El Menzel", "Ghiata Janoubia", "Imouzzar Kandar", "Oulad Ali Youssef", "Oulad Idriss", "Ribaa", "Sidi Ali Bousserghine", "Tafajight", "Tazouta"]
+        },
+        {
+          "nom": "Province de Taounate",
+          "type": "province",
+          "communes": ["Taounate", "Aïn Aicha", "Aïn Legdah", "Ain Maatouf", "Ain Mediouna", "Bni Ftah", "Bouarouss", "El Khemis", "Galaz", "Ghafsai", "Had Msila", "Jrarda", "Karia Ba Mohamed", "Kerrouchen", "Kissane", "Koudiat Bni Aomar", "Oulad Daoud", "Ouled Aissa", "Rhafsaï", "Sahel", "Sidi Abdelkader", "Sidi Mokhfi", "Sidi Yahia Bni Zeroual", "Sraghna", "Tafrant", "Tissa", "Traiba"]
+        },
+        {
+          "nom": "Province de Taza",
+          "type": "province",
+          "communes": ["Taza", "Aknoul", "Aït Seghrouchen", "Bab Marzouka", "Bni Frassen", "Bni Lent", "Bour", "Guigou", "Jbarna", "Karia Ba Mohamed", "Oued Amlil", "Oulad Ziane", "Ras El Oued", "Skoura", "Tahla", "Tainaste", "Tirrhiste"]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "nom": "Rabat-Salé-Kénitra",
+      "chef_lieu": "Rabat",
+      "provinces_prefectures": [
+        {
+          "nom": "Préfecture de Rabat",
+          "type": "préfecture",
+          "communes": ["Rabat", "Agdal Riyad", "Hassan", "Souissi", "Yacoub El Mansour", "El Youssoufia"]
+        },
+        {
+          "nom": "Préfecture de Salé",
+          "type": "préfecture",
+          "communes": ["Salé", "Bettana", "Laâyoune", "Tabriquet", "Sala Al Jadida"]
+        },
+        {
+          "nom": "Préfecture de Skhirate-Témara",
+          "type": "préfecture",
+          "communes": ["Témara", "Skhirate", "Aïn El Aouda", "Ain Attig", "Mers El Kheir", "Sabbah", "Sidi Yahia Zair"]
+        },
+        {
+          "nom": "Province de Kénitra",
+          "type": "province",
+          "communes": ["Kénitra", "Allal Tazi", "Aïn Dafali", "Bouknadel", "Had Kourt", "Mechraa Bel Ksiri", "Mograne", "Moulay Bousselham", "Nkhilet El Oulja", "Oulad Slama", "Oulad Yahia Louled", "Sidi Allal El Bahraoui", "Sidi Allal Tazi", "Sidi Taibi", "Souk El Arba Du Gharb"]
+        },
+        {
+          "nom": "Province de Khémisset",
+          "type": "province",
+          "communes": ["Khémisset", "Aïn Johra", "Ain Sbit", "Ait Ichou", "Ait Malek", "El Ganzra", "Jemaa Moualine El Oued", "Khenichet", "Maaziz", "Oulmès", "Oulad Boughrab", "Rommani", "Sebt Bni Zoli", "Sidi Abderrahmane", "Tigrigra", "Toualet"]
+        },
+        {
+          "nom": "Province de Sidi Kacem",
+          "type": "province",
+          "communes": ["Sidi Kacem", "Aïn Defali", "Amjout", "Bni Rzine", "El Kansera", "Had Msila", "Jorf El Melha", "Oulad Bousselham", "Oulad Daoud Zkhanine", "Oulad M'barek", "Oulad Yahia Louled", "Sebaa Aiyoun", "Sidi Abderrahmane", "Sidi Kasem", "Sidi Mohamed Lahmar", "Sidi Slimane"]
+        },
+        {
+          "nom": "Province de Sidi Slimane",
+          "type": "province",
+          "communes": ["Sidi Slimane", "Ait Daoud", "Amar Channaa", "Dar Bel Hamri", "Had Kourt", "Jemaa Ouled Derhem", "Khenichet", "Oulad Boughrab", "Oulad Hammou", "Sidi El Khadir", "Zghira"]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "nom": "Béni Mellal-Khénifra",
+      "chef_lieu": "Béni Mellal",
+      "provinces_prefectures": [
+        {
+          "nom": "Province d'Azilal",
+          "type": "province",
+          "communes": ["Azilal", "Afourar", "Afourer", "Agoudi N'Lkhair", "Aït Abbas", "Aït Bou Oulli", "Aït M'Hammed", "Aït Tamlil", "Bin El Ouidane", "Bzou", "Demnate", "El Ksiba", "Foum El Anser", "Ighil", "Itzer", "Moulay Aïssa Ben Driss", "Oulad Abad", "Sidi Aïssa", "Sidi Nacer", "Tabant", "Timit", "Zaouiat Aït Ishak"]
+        },
+        {
+          "nom": "Province de Béni Mellal",
+          "type": "province",
+          "communes": ["Béni Mellal", "Aghbala", "Aït Attab", "Aït Rbaâ", "El Ksiba", "Foum El Anser", "Ksiba", "Ouaouizaght", "Oulad Ayad", "Oulad Yaich", "Souk Sebt Oulad Nemma", "Zaouiat Cheikh"]
+        },
+        {
+          "nom": "Province de Fquih Ben Salah",
+          "type": "province",
+          "communes": ["Fquih Ben Salah", "Aït Baha", "Aït M'Hammed", "Bni Amir", "Dar Oulad Zidouh", "El Hajja", "Foum Oudi", "Oulad Gaid", "Oulad Mbarek", "Sebt Bni Moktar", "Sidi Jaber", "Sidi Yahia El Gharb", "Skouriba", "Souk Jemaa Oulad Amrane", "Tlet Bni Khlifa"]
+        },
+        {
+          "nom": "Province de Khénifra",
+          "type": "province",
+          "communes": ["Khénifra", "Aghbalou Aqorar", "Aguelmam Azegza", "Aguelmous", "Ait Ishak", "Anefgou", "El Kebab", "El Orjane", "Louchene", "M'rirt", "Moha Ou Hammou Zayani", "N'zala Bni Ammar", "Oulad Aïssa", "Oulad Selmane", "Oulad Zbair", "Sebt Aït Ikkou", "Tighassaline", "Timahdite", "Timoulilt"]
+        },
+        {
+          "nom": "Province de Khouribga",
+          "type": "province",
+          "communes": ["Khouribga", "Aïn Kaïcher", "Aït Ammar", "Bejaad", "Bni Drar", "Bni Yakhlef", "El Borouj", "Fquih Ben Salah", "Hattane", "Lqliâa", "Oued Zem", "Oulad Azzouz", "Oulad Farès", "Oulad Ghadbane", "Sidi Amar", "Sidi Daoui", "Sidi Lahcen", "Tlet Bni Khlifa"]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "nom": "Casablanca-Settat",
+      "chef_lieu": "Casablanca",
+      "provinces_prefectures": [
+        {
+          "nom": "Préfecture de Casablanca-Anfa",
+          "type": "préfecture",
+          "communes": ["Casablanca", "Aïn-Chock", "Aïn-Sebaâ", "Al Fida", "Ben M'sik", "Hay Hassani", "Hay Mohammadi", "Mers Sultan", "Moulay Rachid", "Roches Noires", "Sidi Bernoussi", "Sidi Moumen"]
+        },
+        {
+          "nom": "Préfecture de Mohammédia",
+          "type": "préfecture",
+          "communes": ["Mohammédia", "Aïn Harrouda", "Ben Yakhlef", "Bni Yakhlef", "Echellalate", "Oulad Haddou"]
+        },
+        {
+          "nom": "Province de Médiouna",
+          "type": "province",
+          "communes": ["Médiouna", "Bouskoura", "Oulad Azzouz", "Sidi Maarouf", "Tit Mellil", "Tnine Chtouka"]
+        },
+        {
+          "nom": "Province de Benslimane",
+          "type": "province",
+          "communes": ["Benslimane", "Ahlaf", "Aïn Tizgha", "Bni Meskine", "Bou Areg", "Bouznika", "Had Oulad Issa", "Oulad Boulnouara", "Sidi Bettache", "Souk El Arba Sidi El Hachem"]
+        },
+        {
+          "nom": "Province d'El Jadida",
+          "type": "province",
+          "communes": ["El Jadida", "Azemmour", "Bir Jdid", "Bni Yakhlef", "El Haouzia", "Had Oued Hassar", "Oulad Aissa", "Oulad Friha", "Oulad Ghadbane", "Oulad Hamdane", "Oulad Hlima", "Oulad Mhamed", "Oulad Sghir", "Ouled Tayeb", "Sidi Abed", "Sidi Ali Benhamed", "Sidi Mohammed Ben Rahal", "Soualem", "Tleta Aïn Sbiâa", "Zemamra"]
+        },
+        {
+          "nom": "Province de Nouaceur",
+          "type": "province",
+          "communes": ["Dar Bouazza", "Bouskoura", "Lahraouiyine", "Lissasfa", "Mdiq", "Sidi Hajjaj Oum Anza", "Sidi Maarouf", "Tit Mellil"]
+        },
+        {
+          "nom": "Province de Settat",
+          "type": "province",
+          "communes": ["Settat", "Aïn Blal", "Aïn Dorbane", "Aïn Nzagh", "Ben Ahmed", "Bni Khloug", "El Brouj", "Guisser", "Had Soualem", "Jaqma", "Koudiat Baïda", "Lakhzazra", "Lalla Mimouna", "Mechraa Ben Abbou", "Mrija", "Oulad Abbou", "Oulad Amrane El Mekki", "Oulad Bouchaib", "Oulad Haj Driss", "Oulad Hamdan", "Oulad Said", "Oulad Sghir", "Oulad Sidi Ben Daoud", "Oum Azarine", "Sidi El Aidi", "Sidi Mansour", "Sidi Yahia Ben Rahmoun", "Souk El Had Bni Drar", "Znada"]
+        },
+        {
+          "nom": "Province de Berrechid",
+          "type": "province",
+          "communes": ["Berrechid", "Ain Bni Ammar", "Besbes", "Bni Khloug", "Bir Jdid", "Bouskoura", "El Mansouria", "Had Soualem", "Oulad Abbou", "Oulad Hamdane", "Sidi Abed", "Sidi Rahhal Chatai", "Soualem", "Tnine Chtouka"]
+        },
+        {
+          "nom": "Province de Sidi Bennour",
+          "type": "province",
+          "communes": ["Sidi Bennour", "Oulad Aissa", "Oulad Amrane El Mekki", "Oulad Fares", "Oulad Ghadbane", "Oulad Hlima", "Oulad Hsine", "Oulad M'Barek", "Oulad Said", "Sebt El Maârif", "Sidi Smail", "Souk Sebt Oulad Nemma", "Tleta Aïn Sbiâa"]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "nom": "Marrakech-Safi",
+      "chef_lieu": "Marrakech",
+      "provinces_prefectures": [
+        {
+          "nom": "Préfecture de Marrakech",
+          "type": "préfecture",
+          "communes": ["Marrakech", "Agafay", "Ait Faska", "Ghmate", "Loudaya", "Mzouda", "Ouahat Sidi Brahim", "Sid Zouin", "Sidi Abdellah Ghiat", "Tamesloht", "Tassoultant", "Tnine Aït Oucheg", "Zouirat", "Amizmiz"]
+        },
+        {
+          "nom": "Province d'Al Haouz",
+          "type": "province",
+          "communes": ["Ait Aadel", "Ait Faska", "Aït Oumir", "Amizmiz", "Anougal", "Asni", "Ghighaya", "Ijoukak", "Lalla Takerkoust", "Oulad Hassoune", "Oulad Moumen", "Ouirgane", "Ourika", "Sidi Badhaj", "Sidi Fadel", "Tahannaout", "Talat N'Yaaqoub", "Tighedouine", "Zerkten"]
+        },
+        {
+          "nom": "Province de Chichaoua",
+          "type": "province",
+          "communes": ["Chichaoua", "Adassil", "Afalla Issen", "Ahdil", "Aït Aissi Ihahane", "Aïn Tazitounte", "Bouabout", "Imi N'Tlit", "Khmeis Bni Imour", "Lakhsas", "Machraa Lqsiba", "Mejjate", "Oulad Dlim", "Sidi Mokhtar", "Tabraoute", "Tanakoub", "Tidili Mesfioua", "Zaouiat Igourar"]
+        },
+        {
+          "nom": "Province de El Kelaa des Sraghna",
+          "type": "province",
+          "communes": ["El Kelaâ des Sraghna", "Aït Lamine", "Attaouia", "El Ghaidour", "El Kesba", "Had Bralil", "Laaounate", "Mnabha", "Mzilte", "Oulad Mhamed", "Oulad Sbita", "Ouled Sbih", "Rida", "Sidi Bou Othmane", "Sidi Rahal", "Tamaguert", "Tazouguerte", "Zaouit Brahim", "Zerkten"]
+        },
+        {
+          "nom": "Province d'Essaouira",
+          "type": "province",
+          "communes": ["Essaouira", "Adaghas", "Aglif", "Aguerd", "Aïn Aissi Ihahane", "Aït Daoud", "Akermoud", "Bni Zekri", "Djemaa Shaim", "El Ghaidour", "El Hanchane", "Had Dra", "Imi Mkorn", "Kourimat", "Laâyoune", "Meskala", "Oulad Sidi Bahmed", "Oulad Yahia", "Sidi Kaouki", "Smimou", "Tanalt", "Zaouiat Ben Hmida"]
+        },
+        {
+          "nom": "Province de Rehamna",
+          "type": "province",
+          "communes": ["Ben Guerir", "Ait Imaloul", "Aït Nzel", "Elhajeb", "Laaounate", "Machraa Lkdim", "Ouled Bou Bker", "Oulad Said", "Sidi Bou Othmane", "Sidi Driss", "Skhour Rehamna", "Souihla", "Stah Guentour", "Tnine Malal"]
+        },
+        {
+          "nom": "Province de Safi",
+          "type": "province",
+          "communes": ["Safi", "Aït Haj Kaddour", "Bouguedra", "Bsaidla", "El Ghedira", "Had Hrara", "Had Oulad Fraj", "Jilett", "Kariat El Ouled", "Khemis Bni Imour", "Lakhdar", "Laouamra", "Oulad Hassoune", "Ras El Ain", "Sebt Gzoula", "Sebt Gzoula", "Sidi Ahmed El Bouya", "Sidi Tiji", "Sidi Youssef Ben Ahmed", "Soualem", "Tlet Lefhed", "Youssoufia"]
+        },
+        {
+          "nom": "Province de El Youssoufia",
+          "type": "province",
+          "communes": ["Youssoufia", "Ait Imaloul", "Bou Assila", "El Ghiate", "El Ghriss", "Had Bralil", "Jnane Bouih", "Khmis Sidi Yahia", "Laaounate", "Machraa Lkdim", "Mnabha", "Oulad Gaid", "Oulad Messaoud", "Sebt Bni Garfet", "Sebt Gzoula", "Skhour Rehamna"]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "nom": "Drâa-Tafilalet",
+      "chef_lieu": "Errachidia",
+      "provinces_prefectures": [
+        {
+          "nom": "Province d'Errachidia",
+          "type": "province",
+          "communes": ["Errachidia", "Aarab Sebbah Gheris", "Aarab Sebbah Ziz", "Aghbalou N'Kerdous", "Aoufous", "Arfoud", "Boudnib", "El Rich", "Erfoud", "Er-Rich", "Goulmima", "Gourrama", "Jorf", "Ksar Assaka", "Msissi", "Outat El Haj", "Rissani", "Sifa", "Tinejdad", "Tinjdad", "Touroug", "Zaouit Amelkis"]
+        },
+        {
+          "nom": "Province de Midelt",
+          "type": "province",
+          "communes": ["Midelt", "Aghbalou", "Agoudim", "Aït Ayach", "Aït Oufella", "Boulajoul", "El Aïoun", "Fezna", "Gheris El Ouali", "Kerrouchen", "N'Zala Bni Ammar", "Oulad Ali Ou Ichou", "Skoura", "Tounfite"]
+        },
+        {
+          "nom": "Province de Ouarzazate",
+          "type": "province",
+          "communes": ["Ouarzazate", "Agdez", "Amerzgane", "Aït Zineb", "Boumalne Dadès", "Ghassate", "Imassine", "Imi N'oul", "Kelaa M'Gouna", "Siroua", "Skoura", "Tabia", "Taznakht", "Toundoute"]
+        },
+        {
+          "nom": "Province de Tinghir",
+          "type": "province",
+          "communes": ["Tinghir", "Aït Bou Llane", "Aït Khebbache", "Aït Mansour", "Aït Sedrat", "Alemsid", "Ghouimam", "Ichbakène", "Iknioun", "Ikniouen", "Imider", "Kelaa M'Gouna", "Tafraoute N'Aït Baha", "Tinejdad", "Toudgha Aït Ali Oussaid", "Touroug"]
+        },
+        {
+          "nom": "Province de Zagora",
+          "type": "province",
+          "communes": ["Zagora", "Afella N'Dra", "Afra", "Agdz", "Aït Benhaddou", "Amsittène", "Amazraou", "Bni Zoli", "Fezouata", "Ktaoua", "M'hamid El Ghizlane", "Nkob", "Oulad Yahia Dades", "Tamegroute", "Tamnougalt", "Tazouguerte", "Tinezouline", "Tissint", "Zagora"]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "nom": "Souss-Massa",
+      "chef_lieu": "Agadir",
+      "provinces_prefectures": [
+        {
+          "nom": "Préfecture d'Agadir-Ida Ou Tanane",
+          "type": "préfecture",
+          "communes": ["Agadir", "Aourir", "Drarga", "Imi Mqorn", "Lqliaa", "Massa", "Sidi Bibi", "Tikiouine", "Tindouf", "Tildi"]
+        },
+        {
+          "nom": "Province d'Inezgane-Aït Melloul",
+          "type": "province",
+          "communes": ["Inezgane", "Aït Melloul", "Aourir", "Biougra", "Chtouka Aït Baha", "Dcheira El Jihadia", "Lqliaa", "Sebt El Guerdane", "Tnine Chtouka"]
+        },
+        {
+          "nom": "Province de Chtouka-Aït Baha",
+          "type": "province",
+          "communes": ["Biougra", "Ait Amira", "Aït Baha", "Aït Iaazza", "Biougra", "El Massa", "Lqliaa", "Oulad Dahou", "Oulad Jerrar", "Sebt El Guerdane", "Sidi Boumoussa", "Tafraout", "Tisgui N'Laa", "Tnine Chtouka"]
+        },
+        {
+          "nom": "Province de Taroudant",
+          "type": "province",
+          "communes": ["Taroudant", "Adar", "Agadir Melloul", "Ahl Ras El Aïn", "Ahl Tifnoute", "Ahmar Laglalcha", "Aït Abdallah", "Aït Igas", "Aït Melloul", "Aoulouz", "Argana", "Imi Mqorn", "Irherm", "Nkob", "Oulad Berhil", "Oulad Teïma", "Sebt Oulad Berrehil", "Sidi Ahmed Ou Moussa", "Tafraout", "Tiout", "Tissint", "Toubkal", "Znaga"]
+        },
+        {
+          "nom": "Province de Tiznit",
+          "type": "province",
+          "communes": ["Tiznit", "Afella Ighir", "Aglou", "Aït Erkha", "Aït Ouafella", "Ammelne", "Anezi", "Arbaa Aït Ahmed", "Bni Lent", "Douar Oulad Jerrar", "Igherm N'tazoult", "Ighrem", "Inchaden", "Mesti", "Sidi Moussa Aglou", "Tafraoute", "Tahala", "Tafnidilt", "Tanalt"]
+        },
+        {
+          "nom": "Province de Tata",
+          "type": "province",
+          "communes": ["Tata", "Adis", "Aguinane", "Akka", "Aït Ouabelli", "Aït Saoun", "Bou Izakarne", "Foum Zguid", "Ighrem", "Imi N'Tlit", "Issafen", "Kerdous", "Oum El Achar", "Tissint", "Zaouiat Sidi Tahar"]
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "nom": "Guelmim-Oued Noun",
+      "chef_lieu": "Guelmim",
+      "provinces_prefectures": [
+        {
+          "nom": "Province de Guelmim",
+          "type": "province",
+          "communes": ["Guelmim", "Abaynou", "Aday", "Aferkat", "Amtoudi", "Asrir", "Bouizakarne", "Fask", "Icht", "Lakhsas", "Tagante", "Tiglit", "Tizoula"]
+        },
+        {
+          "nom": "Province d'Assa-Zag",
+          "type": "province",
+          "communes": ["Assa", "Ain Ben Tili", "Daoura", "Zag"]
+        },
+        {
+          "nom": "Province de Tan-Tan",
+          "type": "province",
+          "communes": ["Tan-Tan", "Abteh", "El Ouatia"]
+        },
+        {
+          "nom": "Province de Sidi Ifni",
+          "type": "province",
+          "communes": ["Sidi Ifni", "Aït Baamrane", "Aït Boufoul", "Arbaa Ait Ahmed", "Bou Izakarne", "Maâder", "Mirleft", "Sidi Ouarsik", "Tafraout El Mouloud"]
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "nom": "Laâyoune-Sakia El Hamra",
+      "chef_lieu": "Laâyoune",
+      "provinces_prefectures": [
+        {
+          "nom": "Province de Laâyoune",
+          "type": "province",
+          "communes": ["Laâyoune", "Boukraa", "El Marsa", "Foum El Oued", "Tarfaya", "Tah"]
+        },
+        {
+          "nom": "Province de Boujdour",
+          "type": "province",
+          "communes": ["Boujdour", "El Hoceima", "Gueltat Zemmour", "Jraifia", "Lamssid"]
+        },
+        {
+          "nom": "Province de Tarfaya",
+          "type": "province",
+          "communes": ["Tarfaya", "Akhfennir", "El Ouatia"]
+        },
+        {
+          "nom": "Province d'Es-Semara",
+          "type": "province",
+          "communes": ["Es-Semara", "Amgala", "Bir Lahlou", "Ech Chikhiya", "Haouza", "Jdiriya", "Lehseyba", "Ouarkziz", "Sidi Ahmed Laarouss", "Tifariti"]
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "nom": "Dakhla-Oued Ed-Dahab",
+      "chef_lieu": "Dakhla",
+      "provinces_prefectures": [
+        {
+          "nom": "Province d'Oued Ed-Dahab",
+          "type": "province",
+          "communes": ["Dakhla", "Bir Gandouz", "Gleibat El Foula", "Imlili", "Mijik", "Oum Dreyga"]
+        },
+        {
+          "nom": "Province d'Aousserd",
+          "type": "province",
+          "communes": ["Aousserd", "Aghouinite", "Bir Anzarane", "Tichla", "Zoug"]
+        }
+      ]
+    }
+  ]
+}

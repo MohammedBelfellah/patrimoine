@@ -4,6 +4,29 @@
 <div class="card" style="max-width:450px;">
   <h2>Connexion</h2>
   <p class="muted">Accès admin / superadmin / inspecteur (email + mot de passe).</p>
+  
+  <!-- DEV ONLY: Test Credentials -->
+  <div style="background: #f0f9ff; border: 1px solid #0369a1; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 13px;">
+    <strong style="color: #0369a1;">🔑 Comptes de test (DEV)</strong>
+    <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="background: white; padding: 8px; border-radius: 4px;">
+        <strong>Super Admin</strong><br>
+        <span style="color: #666;">Email:</span> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 3px;">superadmin@patrimoine.local</code><br>
+        <span style="color: #666;">Password:</span> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 3px;">SuperAdmin@123</code>
+      </div>
+      <div style="background: white; padding: 8px; border-radius: 4px;">
+        <strong>Admin</strong><br>
+        <span style="color: #666;">Email:</span> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 3px;">admin@patrimoine.local</code><br>
+        <span style="color: #666;">Password:</span> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 3px;">Admin@123</code>
+      </div>
+      <div style="background: white; padding: 8px; border-radius: 4px;">
+        <strong>Inspecteur</strong><br>
+        <span style="color: #666;">Email:</span> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 3px;">inspecteur@patrimoine.local</code><br>
+        <span style="color: #666;">Password:</span> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 3px;">Inspecteur@123</code>
+      </div>
+    </div>
+  </div>
+
   <form method="post">
     {% csrf_token %}
     {{ form.non_field_errors }}

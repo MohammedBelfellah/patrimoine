@@ -1,0 +1,46 @@
+{% extends "core/base.html" %}
+{% block title %}Carte - Patrimoines{% endblock %}
+{% block head_extra %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+  #map { height: 70vh; border-radius: 8px; }
+  .legend { background: white; padding: 12px; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,.2); }
+  .legend-item { margin-bottom: 8px; font-size: 14px; }
+  .legend-color { display: inline-block; width: 18px; height: 18px; margin-right: 6px; border-radius: 3px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Carte Interactive des Patrimoines</h2>
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+  const map = L.map('map').setView([31.7917, -7.0926], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  const typeColors = {
+    'MONDIAL': '#ffc107',
+    'NATUREL': '#28a745',
+    'HISTORIQUE': '#007bff',
+    'AUTRE': '#6c757d'
+  };
+
+  const patrimoines = {{ patrimoines_json|safe }};
+  
+  patrimoines.forEach(p => {
+    const color = typeColors[p.type] || '#999';
+    if (p.geom) {
+      const layer = L.geoJSON(p.geom, {
+        style: { color: color, weight: 2, opacity: 0.7, fillOpacity: 0.3 }
+      }).addTo(map);
+      
+      layer.bindPopup(`<strong>${p.nom}</strong><br/>${p.type}<br/><a href="/patrimoines/${p.id}/">Voir détails</a>`);
+    }
+  });
+</script>
+{% endblock %}

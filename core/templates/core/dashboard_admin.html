@@ -1,9 +1,43 @@
 {% extends "core/base.html" %}
 {% block title %}Admin{% endblock %}
+{% block head_extra %}
+<style>
+  .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
+  .dashboard-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-decoration: none; }
+  .dashboard-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,.2); }
+  .dashboard-card h3 { margin: 0 0 12px 0; font-size: 18px; }
+  .dashboard-card p { margin: 0; font-size: 14px; opacity: 0.9; }
+  .dashboard-card.patrimoine { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+  .dashboard-card.inspection { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+  .dashboard-card.intervention { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+  .dashboard-card.document { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+</style>
+{% endblock %}
 {% block content %}
 <div class="card">
-    <h2>Admin panel</h2>
-    <p>Gestion opérationnelle (hors privilèges superadmin).</p>
-    <p><a href="/admin/">Ouvrir Django Admin</a></p>
+  <h2>⚙️ Admin - Gestion Opérationnelle</h2>
+  <p class="muted">Gestion administrative et supervision des opérations.</p>
+
+  <div class="dashboard-grid">
+    <a href="{% url 'patrimoine-list' %}" class="dashboard-card patrimoine">
+      <h3>📍 Patrimoines</h3>
+      <p>Créer, éditer et consulter les patrimoines</p>
+    </a>
+
+    <a href="{% url 'inspection-list' %}" class="dashboard-card inspection">
+      <h3>🔍 Inspections</h3>
+      <p>Gérer et valider les inspections</p>
+    </a>
+
+    <a href="{% url 'intervention-list' %}" class="dashboard-card intervention">
+      <h3>🛠️ Interventions</h3>
+      <p>Gérer les projets de restauration</p>
+    </a>
+
+    <a href="{% url 'document-list' %}" class="dashboard-card document">
+      <h3>📄 Documents</h3>
+      <p>Gérer les pièces jointes</p>
+    </a>
+  </div>
 </div>
 {% endblock %}

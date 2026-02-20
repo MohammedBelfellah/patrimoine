@@ -1,0 +1,36 @@
+{% extends "core/base.html" %}
+{% block title %}Interventions{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>🔧 Interventions</h2>
+
+  <div style="margin-bottom: 16px;">
+    <a href="{% url 'intervention-create' %}" class="btn btn-primary">+ Ajouter une intervention</a>
+  </div>
+
+  {% if interventions %}
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead>
+      <tr style="background: #f0f0f0;">
+        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Projet</th>
+        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Type</th>
+        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Statut</th>
+        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Début</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inter in interventions %}
+      <tr style="border-bottom: 1px solid #ddd;">
+        <td style="padding: 10px;">{{ inter.nom_projet }}</td>
+        <td style="padding: 10px;">{{ inter.get_type_intervention_display }}</td>
+        <td style="padding: 10px;"><strong>{{ inter.get_statut_display }}</strong></td>
+        <td style="padding: 10px;">{{ inter.date_debut|date:"d/m/Y" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Aucune intervention enregistrée.</p>
+  {% endif %}
+</div>
+{% endblock %}

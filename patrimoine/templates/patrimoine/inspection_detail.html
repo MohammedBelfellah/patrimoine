@@ -1,0 +1,106 @@
+{% extends "core/base.html" %}
+{% block title %}Inspection - {{ inspection.id_patrimoine.nom_fr }}{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>📋 Inspection: {{ inspection.id_patrimoine.nom_fr }}</h2>
+  <p class="muted"><small>{{ inspection.id_patrimoine.full_location }}</small></p>
+
+  <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+      <div>
+        <strong>Date d'inspection:</strong>
+        <p>{{ inspection.date_inspection|date:"d/m/Y" }}</p>
+      </div>
+      <div>
+        <strong>État:</strong>
+        <p><span style="padding: 4px 12px; background: {% if inspection.etat == 'BON' %}#d1fae5{% elif inspection.etat == 'MOYEN' %}#fef3c7{% else %}#fee2e2{% endif %}; border-radius: 4px; font-weight: bold;">{{ inspection.get_etat_display }}</span></p>
+      </div>
+      <div>
+        <strong>Inspecteur:</strong>
+        <p>{{ inspection.id_inspecteur.email }}</p>
+      </div>
+      <div>
+        <strong>Dernière mise à jour:</strong>
+        <p>{{ inspection.updated_at|date:"d/m/Y H:i" }}</p>
+      </div>
+    </div>
+    
+    {% if inspection.observations %}
+    <div style="margin-top: 12px;">
+      <strong>Observations:</strong>
+      <p style="margin-top: 4px;">{{ inspection.observations }}</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <div style="margin-bottom: 16px; display: flex; gap: 10px;">
+    {% if can_request_modification %}
+    <a href="{% url 'inspection-request-edit' inspection.id_inspection %}" class="btn btn-warning">✏️ Demander une modification</a>
+    {% endif %}
+    <a href="{% url 'inspection-list' %}" class="btn btn-secondary">Retour</a>
+  </div>
+
+  <!-- Modification Requests Section -->
+  {% if modification_requests %}
+  <div style="margin-top: 24px;">
+    <h3>Historique des demandes de modification</h3>
+    {% for req in modification_requests %}
+    <div style="border: 2px solid {% if req.status == 'PENDING' %}#ca8a04{% elif req.status == 'APPROVED' %}#059669{% else %}#dc2626{% endif %}; border-radius: 8px; padding: 16px; margin-bottom: 16px; background: {% if req.status == 'PENDING' %}#fef9c3{% elif req.status == 'APPROVED' %}#d1fae5{% else %}#fee2e2{% endif %};">
+      <div style="display: flex; justify-content: space-between; align-items: start;">
+        <div>
+          <strong style="color: {% if req.status == 'PENDING' %}#854d0e{% elif req.status == 'APPROVED' %}#065f46{% else %}#991b1b{% endif %};">
+            {{ req.get_status_display }} - Demandée le {{ req.requested_at|date:"d/m/Y H:i" }}
+          </strong>
+          <p style="margin-top: 4px; color: #666;"><small>Par: {{ req.requested_by.email }}</small></p>
+        </div>
+        {% if req.status == 'PENDING' and is_admin %}
+        <div style="display: flex; gap: 8px;">
+          <form method="post" action="{% url 'inspection-request-approve' req.id_request %}" style="display: inline;">
+            {% csrf_token %}
+            <label style="font-size: 12px;">Note (optionnel):</label>
+            <input type="text" name="admin_note" placeholder="Note admin..." style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; margin-right: 8px;">
+            <button type="submit" class="btn btn-success" onclick="return confirm('Approuver cette modification?');">✅ Approuver</button>
+          </form>
+          <form method="post" action="{% url 'inspection-request-reject' req.id_request %}" style="display: inline;">
+            {% csrf_token %}
+            <input type="text" name="admin_note" placeholder="Raison du rejet..." style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; margin-right: 8px;">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Rejeter cette modification?');">❌ Rejeter</button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+
+      <div style="margin-top: 12px; background: white; padding: 12px; border-radius: 4px;">
+        <strong>Changements proposés:</strong>
+        <ul style="margin: 8px 0; padding-left: 20px;">
+          <li><strong>Date:</strong> {{ req.proposed_data.date_inspection }}</li>
+          <li><strong>État:</strong> {{ req.proposed_data.etat }}</li>
+          {% if req.proposed_data.observations %}
+          <li><strong>Observations:</strong> {{ req.proposed_data.observations }}</li>
+          {% endif %}
+        </ul>
+      </div>
+
+      {% if req.reviewed_by %}
+      <div style="margin-top: 12px; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px;">
+        <p><strong>Examiné par:</strong> {{ req.reviewed_by.email }} le {{ req.reviewed_at|date:"d/m/Y H:i" }}</p>
+        {% if req.admin_note %}
+        <p><strong>Note admin:</strong> {{ req.admin_note }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<style>
+  .btn { display: inline-block; padding: 8px 16px; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; color: white; }
+  .btn-warning { background: #f59e0b; }
+  .btn-success { background: #10b981; }
+  .btn-danger { background: #ef4444; }
+  .btn-secondary { background: #6b7280; }
+  .btn:hover { opacity: 0.9; }
+</style>
+{% endblock %}

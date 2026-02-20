@@ -1,8 +1,37 @@
 {% extends "core/base.html" %}
 {% block title %}Inspecteur{% endblock %}
+{% block head_extra %}
+<style>
+  .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
+  .dashboard-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-decoration: none; }
+  .dashboard-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,.2); }
+  .dashboard-card h3 { margin: 0 0 12px 0; font-size: 18px; }
+  .dashboard-card p { margin: 0; font-size: 14px; opacity: 0.9; }
+  .dashboard-card.patrimoine { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+  .dashboard-card.inspection { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+  .dashboard-card.map { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+</style>
+{% endblock %}
 {% block content %}
 <div class="card">
-  <h2>Inspecteur panel</h2>
-  <p>Accès inspections et suivi terrain.</p>
+  <h2>🔍 Inspecteur - Suivi Terrain</h2>
+  <p class="muted">Consulter patrimoines et gérer vos inspections.</p>
+
+  <div class="dashboard-grid">
+    <a href="{% url 'patrimoine-list' %}" class="dashboard-card patrimoine">
+      <h3>📍 Patrimoines</h3>
+      <p>Consulter les patrimoines (lecture seule)</p>
+    </a>
+
+    <a href="{% url 'inspection-list' %}" class="dashboard-card inspection">
+      <h3>🔍 Mes Inspections</h3>
+      <p>Ajouter et consulter mes inspections</p>
+    </a>
+
+    <a href="{% url 'patrimoine-map' %}" class="dashboard-card map">
+      <h3>🗺️ Carte</h3>
+      <p>Vue cartographique des patrimoines</p>
+    </a>
+  </div>
 </div>
 {% endblock %}

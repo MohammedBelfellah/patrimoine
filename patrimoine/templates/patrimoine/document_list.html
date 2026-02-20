@@ -1,0 +1,35 @@
+{% extends "core/base.html" %}
+{% block title %}Documents{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>📄 Documents</h2>
+  <p class="muted">Gestion centralisée des pièces jointes et uploads.</p>
+  
+  {% if documents %}
+  <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
+    <thead>
+      <tr style="background: #f0f0f0;">
+        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Nom</th>
+        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Type</th>
+        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Taille (MB)</th>
+        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Uploadé par</th>
+        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for doc in documents %}
+      <tr style="border-bottom: 1px solid #ddd;">
+        <td style="padding: 10px;">{{ doc.file_name }}</td>
+        <td style="padding: 10px;">{{ doc.get_type_document_display }}</td>
+        <td style="padding: 10px;">{{ doc.file_size_mb }}</td>
+        <td style="padding: 10px;">{{ doc.uploaded_by.email }}</td>
+        <td style="padding: 10px;">{{ doc.uploaded_at|date:"d/m/Y H:i" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Aucun document enregistré.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "core/base.html" %}
+{% block title %}{{ patrimoine.nom_fr }}{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>{{ patrimoine.nom_fr }}</h2>
+  <p class="muted"><small>{{ patrimoine.full_location }}</small></p>
+
+  <div style="margin-bottom: 16px;">
+    {% if patrimoine.nom_ar %}
+    <p><strong>Nom arabe:</strong> {{ patrimoine.nom_ar }}</p>
+    {% endif %}
+    <p><strong>Type:</strong> {{ patrimoine.get_type_patrimoine_display }}</p>
+    <p><strong>Statut:</strong> {{ patrimoine.get_statut_display }}</p>
+    {% if patrimoine.reference_administrative %}
+    <p><strong>Référence administrative:</strong> {{ patrimoine.reference_administrative }}</p>
+    {% endif %}
+    {% if patrimoine.description %}
+    <p><strong>Description:</strong></p>
+    <p>{{ patrimoine.description }}</p>
+    {% endif %}
+    <p><strong>Créé par:</strong> {{ patrimoine.created_by.email }} ({{ patrimoine.created_at|date:"d/m/Y H:i" }})</p>
+    <p><strong>Mis à jour:</strong> {{ patrimoine.updated_at|date:"d/m/Y H:i" }}</p>
+  </div>
+
+  <div style="margin-bottom: 16px;">
+    {% if can_edit %}
+    <a href="{% url 'patrimoine-edit' patrimoine.id_patrimoine %}" class="btn btn-primary">Éditer</a>
+    {% if user.is_superuser %}
+    <form method="post" action="{% url 'patrimoine-delete' patrimoine.id_patrimoine %}" style="display:inline;" onsubmit="return confirm('Confirmer suppression?');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Supprimer</button>
+    </form>
+    {% endif %}
+    {% endif %}
+    <a href="{% url 'patrimoine-list' %}" class="btn btn-secondary">Retour</a>
+  </div>
+</div>
+{% endblock %}

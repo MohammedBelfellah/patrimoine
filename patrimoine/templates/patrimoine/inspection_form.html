@@ -1,0 +1,173 @@
+{% extends "core/base.html" %}
+{% block title %}Ajouter inspection{% endblock %}
+{% block head_extra %}
+<style>
+  form { display: flex; flex-direction: column; gap: 16px; }
+  .form-group { display: flex; flex-direction: column; }
+  label { font-weight: bold; margin-bottom: 4px; }
+  input, select, textarea { padding: 8px; width: 100%; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+  textarea { min-height: 100px; }
+  button { padding: 10px 16px; background: #1d4ed8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+  button:hover { background: #1e40af; }
+  .error { color: #dc2626; padding: 12px; background: #fee2e2; border-radius: 4px; margin-bottom: 16px; }
+  .info { background: #dbeafe; border-left: 4px solid #1d4ed8; padding: 12px; margin-bottom: 16px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Ajouter une inspection</h2>
+
+  <div class="info">
+    <strong>ℹ️ Réservé aux Inspecteurs:</strong> Seuls les utilisateurs avec le rôle "Inspecteur" peuvent créer des inspections. Les administrateurs peuvent uniquement consulter et approuver les demandes de modification.
+  </div>
+
+  {% if error %}
+  <div class="error">❌ {{ error }}</div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="form-group">
+      <label for="id_region"><strong>Région *</strong></label>
+      <select id="id_region" name="id_region" required onchange="updateInspectionProvinces()">
+        <option value="">-- Sélectionner --</option>
+        {% for region in regions %}
+        <option value="{{ region.id_region }}">{{ region.nom_region }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="id_province"><strong>Province/Préfecture *</strong></label>
+      <select id="id_province" name="id_province" required onchange="updateInspectionCommunes()">
+        <option value="">-- Sélectionner --</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="id_commune"><strong>Commune *</strong></label>
+      <select id="id_commune" name="id_commune" required onchange="updateInspectionPatrimoines()">
+        <option value="">-- Sélectionner --</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="id_patrimoine"><strong>Patrimoine *</strong></label>
+      <select id="id_patrimoine" name="id_patrimoine" required>
+        <option value="">-- Sélectionner --</option>
+        {% for p in patrimoines %}
+        <option value="{{ p.id_patrimoine }}">{{ p.nom_fr }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="date_inspection"><strong>Date d'inspection *</strong></label>
+      <input type="date" id="date_inspection" name="date_inspection" required />
+    </div>
+
+    <div class="form-group">
+      <label for="etat"><strong>État *</strong></label>
+      <select id="etat" name="etat" required>
+        <option value="">-- Sélectionner --</option>
+        {% for code, label in inspection_etat %}
+        <option value="{{ code }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="observations"><strong>Observations</strong></label>
+      <textarea id="observations" name="observations"></textarea>
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+      <button type="submit" style="flex: 1;">Créer inspection</button>
+      <a href="{% url 'inspection-list' %}" class="btn btn-secondary" style="padding: 10px 16px; text-decoration: none; background: #6b7280; color: white; display: flex; align-items: center; justify-content: center; border-radius: 4px; flex: 1;">Annuler</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  // Get list of regions
+  const regionApi = '/api/regions/';
+  
+  function updateInspectionProvinces() {
+    const regionId = document.getElementById('id_region').value;
+    const provinceSelect = document.getElementById('id_province');
+    const communeSelect = document.getElementById('id_commune');
+    const patrimoineSelect = document.getElementById('id_patrimoine');
+    
+    communeSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+    patrimoineSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+    
+    if (!regionId) {
+      provinceSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+      return;
+    }
+    
+    fetch(`/api/provinces/${regionId}/`)
+      .then(r => r.json())
+      .then(data => {
+        provinceSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+        data.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id_province;
+          opt.textContent = p.nom_province;
+          provinceSelect.appendChild(opt);
+        });
+      })
+      .catch(err => console.error('Error loading provinces:', err));
+  }
+
+  function updateInspectionCommunes() {
+    const provinceId = document.getElementById('id_province').value;
+    const communeSelect = document.getElementById('id_commune');
+    const patrimoineSelect = document.getElementById('id_patrimoine');
+    
+    patrimoineSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+    
+    if (!provinceId) {
+      communeSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+      return;
+    }
+    
+    fetch(`/api/communes/${provinceId}/`)
+      .then(r => r.json())
+      .then(data => {
+        communeSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+        data.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id_commune;
+          opt.textContent = c.nom_commune;
+          communeSelect.appendChild(opt);
+        });
+      })
+      .catch(err => console.error('Error loading communes:', err));
+  }
+
+  function updateInspectionPatrimoines() {
+    const communeId = document.getElementById('id_commune').value;
+    const patrimoineSelect = document.getElementById('id_patrimoine');
+    
+    if (!communeId) {
+      patrimoineSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+      return;
+    }
+    
+    fetch(`/api/patrimoines-by-commune/${communeId}/`)
+      .then(r => r.json())
+      .then(data => {
+        patrimoineSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+        data.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id_patrimoine;
+          opt.textContent = p.nom_fr;
+          patrimoineSelect.appendChild(opt);
+        });
+      })
+      .catch(err => console.error('Error loading patrimoines:', err));
+  }
+</script>
+{% endblock %}

@@ -9,6 +9,7 @@ def healthcheck(request):
 
 urlpatterns = [
     path("", include("core.urls")),
+    path("", include("patrimoine.urls")),
     path("admin/", admin.site.urls),
     path("health/", healthcheck, name="healthcheck"),
 ]

@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from patrimoine import views as pat_views
 
 
 urlpatterns = [
@@ -11,4 +12,7 @@ urlpatterns = [
     path("dashboard/admin/", views.admin_view, name="dashboard-admin"),
     path("dashboard/inspecteur/", views.inspecteur_view, name="dashboard-inspecteur"),
     path("dashboard/public/", views.public_dashboard_view, name="dashboard-public"),
+    path("users/", pat_views.user_management, name="user-management"),
+    path("users/<int:user_id>/toggle/<str:group_name>/", pat_views.toggle_user_group, name="toggle-user-group"),
+    path("audit/", pat_views.audit_log, name="audit-log"),
 ]

@@ -1,0 +1,17 @@
+{% extends "core/base.html" %}
+{% block title %}Journal d'audit{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>📊 Journal d'audit</h2>
+  <p class="muted">Historique des opérations (créations, modifications, suppressions).</p>
+
+  <div style="margin-top: 16px; padding: 12px; background: #f3f4f6; border-radius: 4px; border-left: 4px solid #3b82f6;">
+    <p><strong>Status:</strong> Module en développement. Affichage détaillé des logs PostgreSQL bientôt.</p>
+    <ul style="margin-top: 8px; margin-left: 20px;">
+      <li>Suivi des CREATE/UPDATE/DELETE par utilisateur</li>
+      <li>Timestamps avec avant/après données (JSON)</li>
+      <li>Filtrage par date et type d'action</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

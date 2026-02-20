@@ -10,6 +10,7 @@ from django.contrib.gis.geos import GEOSGeometry, MultiPolygon
 from django.contrib.gis.gdal import DataSource
 from django.core.files.storage import default_storage
 from django.db import connection
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -464,6 +465,29 @@ def _is_admin(user):
 def inspection_list(request):
     """List inspections with pending modification requests for Admin."""
     inspections = Inspection.objects.select_related("id_patrimoine", "id_inspecteur").all()
+
+    search = request.GET.get("search", "").strip()
+    etat_filter = request.GET.get("etat", "").strip()
+    inspecteur_filter = request.GET.get("inspecteur", "").strip()
+    patrimoine_filter = request.GET.get("patrimoine", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+
+    if search:
+        inspections = inspections.filter(
+            Q(id_patrimoine__nom_fr__icontains=search)
+            | Q(id_inspecteur__email__icontains=search)
+        )
+    if etat_filter:
+        inspections = inspections.filter(etat=etat_filter)
+    if inspecteur_filter:
+        inspections = inspections.filter(id_inspecteur__id=inspecteur_filter)
+    if patrimoine_filter:
+        inspections = inspections.filter(id_patrimoine__id_patrimoine=patrimoine_filter)
+    if date_from:
+        inspections = inspections.filter(date_inspection__gte=date_from)
+    if date_to:
+        inspections = inspections.filter(date_inspection__lte=date_to)
     
     # Get pending modification requests for admins
     pending_requests = []
@@ -477,6 +501,9 @@ def inspection_list(request):
         "pending_requests": pending_requests,
         "can_add": _can_add_inspection(request.user),
         "is_admin": _is_admin(request.user),
+        "inspection_etats": Inspection.INSPECTION_ETAT,
+        "inspecteurs": User.objects.filter(groups__name="INSPECTEUR").order_by("email").distinct(),
+        "patrimoines": Patrimoine.objects.only("id_patrimoine", "nom_fr").order_by("nom_fr"),
     }
     return render(request, "patrimoine/inspection_list.html", context)
 
@@ -655,7 +682,33 @@ def intervention_list(request):
     if not _can_edit(request.user):
         return redirect("patrimoine-list")
     interventions = Intervention.objects.select_related("id_patrimoine", "created_by").order_by("-created_at")
-    context = {"interventions": interventions}
+
+    search = request.GET.get("search", "").strip()
+    type_filter = request.GET.get("type", "").strip()
+    statut_filter = request.GET.get("statut", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+
+    if search:
+        interventions = interventions.filter(
+            Q(nom_projet__icontains=search)
+            | Q(id_patrimoine__nom_fr__icontains=search)
+            | Q(prestataire__icontains=search)
+        )
+    if type_filter:
+        interventions = interventions.filter(type_intervention=type_filter)
+    if statut_filter:
+        interventions = interventions.filter(statut=statut_filter)
+    if date_from:
+        interventions = interventions.filter(date_debut__gte=date_from)
+    if date_to:
+        interventions = interventions.filter(date_debut__lte=date_to)
+
+    context = {
+        "interventions": interventions,
+        "intervention_types": Intervention.INTERVENTION_TYPES,
+        "intervention_statuts": Intervention.INTERVENTION_STATUTS,
+    }
     return render(request, "patrimoine/intervention_list.html", context)
 
 
@@ -843,7 +896,29 @@ def intervention_delete(request, id_intervention):
 def document_list(request):
     """List documents."""
     documents = Document.objects.select_related("uploaded_by").all()
-    context = {"documents": documents, "can_add": _can_edit(request.user)}
+
+    search = request.GET.get("search", "").strip()
+    type_filter = request.GET.get("type", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+
+    if search:
+        documents = documents.filter(
+            Q(file_name__icontains=search)
+            | Q(uploaded_by__email__icontains=search)
+        )
+    if type_filter:
+        documents = documents.filter(type_document=type_filter)
+    if date_from:
+        documents = documents.filter(uploaded_at__date__gte=date_from)
+    if date_to:
+        documents = documents.filter(uploaded_at__date__lte=date_to)
+
+    context = {
+        "documents": documents,
+        "can_add": _can_edit(request.user),
+        "document_types": Document.DOCUMENT_TYPES,
+    }
     return render(request, "patrimoine/document_list.html", context)
 
 

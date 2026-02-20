@@ -4,6 +4,11 @@
 <style>
   .page-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .page-title h2 { margin: 0; font-size: 2.2rem; font-weight: 700; color: #1f2937; }
+  .filter-wrap { background: #fff; border-radius: 12px; box-shadow: 0 4px 14px rgba(2,6,23,.08); overflow: hidden; margin-bottom: 14px; }
+  .filter-head { background: linear-gradient(90deg, #1f6bdd, #2570ea); color: #fff; font-size: 1.05rem; font-weight: 700; padding: 10px 16px; }
+  .filter-body { padding: 14px 16px; }
+  .filter-grid { display: grid; grid-template-columns: 1.4fr repeat(2, 1fr); gap: 10px; }
+  .filter-actions { margin-top: 10px; display: flex; gap: 10px; }
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; background: #fff; }
   thead th { background: #18202b; color: #fff; font-size: 1.03rem; font-weight: 700; border: none; }
@@ -15,7 +20,7 @@
   .btn-edit { color: #d97706; border-color: #fcd34d; background: #fffbeb; }
   .btn-del { color: #dc2626; border-color: #fca5a5; background: #fef2f2; }
   .results-count { color: #4b5563; margin: 8px 0 12px; font-size: .98rem; }
-  @media (max-width: 1200px) { .page-title h2 { font-size: 1.7rem; } }
+  @media (max-width: 1200px) { .filter-grid { grid-template-columns: 1fr 1fr; } .page-title h2 { font-size: 1.7rem; } }
 </style>
 {% endblock %}
 {% block content %}
@@ -23,6 +28,50 @@
   <div class="page-title">
     <h2><i class="bi bi-tools"></i> Interventions</h2>
     <a href="{% url 'intervention-create' %}" class="btn btn-success btn-lg"><i class="bi bi-plus-circle"></i> Ajouter une intervention</a>
+  </div>
+
+  <div class="filter-wrap">
+    <div class="filter-head"><i class="bi bi-search"></i> Recherche et Filtres</div>
+    <div class="filter-body">
+    <form method="get">
+      <div class="filter-grid">
+      <div>
+        <label>Recherche</label>
+        <input type="text" name="search" placeholder="Projet, patrimoine, prestataire..." value="{{ request.GET.search }}" />
+      </div>
+      <div>
+        <label>Type</label>
+        <select name="type">
+          <option value="">-- Tous les types --</option>
+          {% for code, label in intervention_types %}
+          <option value="{{ code }}" {% if request.GET.type == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Statut</label>
+        <select name="statut">
+          <option value="">-- Tous les statuts --</option>
+          {% for code, label in intervention_statuts %}
+          <option value="{{ code }}" {% if request.GET.statut == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Date debut</label>
+        <input type="date" name="date_from" value="{{ request.GET.date_from }}" />
+      </div>
+      <div>
+        <label>Date fin</label>
+        <input type="date" name="date_to" value="{{ request.GET.date_to }}" />
+      </div>
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Appliquer</button>
+        <a href="{% url 'intervention-list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-circle"></i> Reinitialiser</a>
+      </div>
+    </form>
+    </div>
   </div>
 
   <p class="results-count"><i class="bi bi-square-fill" style="font-size:.65rem;"></i> {{ interventions|length }} intervention(s)</p>

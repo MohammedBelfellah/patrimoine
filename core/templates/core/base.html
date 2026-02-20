@@ -1,37 +1,207 @@
 <!doctype html>
 <html lang="fr">
+
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{% block title %}Patrimoine{% endblock %}</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #f6f7f9; color: #1f2937; }
-    header { background: #111827; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
-    main { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
-    .card { background: white; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-    a, a:visited { color: #1d4ed8; text-decoration: none; }
-    .nav a { margin-right: 12px; }
-    input { padding: 8px; width: 100%; margin-top: 6px; margin-bottom: 12px; }
-    button { padding: 8px 14px; background: #1d4ed8; color: white; border: none; border-radius: 6px; cursor: pointer; }
-    .muted { color: #6b7280; }
-  </style>
-  {% block head_extra %}{% endblock %}
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Patrimoine{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+        :root {
+            --ink: #0f172a;
+            --ink-2: #1f2937;
+            --muted: #64748b;
+            --sand: #f2efe9;
+            --jade: #0f766e;
+            --copper: #c2410c;
+            --sky: #e0f2fe;
+            --card: #ffffff;
+            --shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+        }
+
+        body {
+            font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+            background: radial-gradient(1200px 600px at 10% -10%, #fde68a, transparent 60%),
+                radial-gradient(1000px 500px at 90% -20%, #bae6fd, transparent 55%),
+                var(--sand);
+            color: var(--ink-2);
+            min-height: 100vh;
+        }
+
+        .brand-title {
+            font-family: "Fraunces", serif;
+            letter-spacing: 0.3px;
+        }
+
+        .app-shell {
+            max-width: 1400px;
+        }
+
+        .app-card {
+            background: var(--card);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: var(--shadow);
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--ink);
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.6);
+            background: #fff;
+            margin-bottom: 12px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+        }
+
+        button:not(.btn) {
+            padding: 10px 16px;
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button:not(.btn):hover {
+            background: #0b1220;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+        }
+
+        th {
+            background: rgba(226, 232, 240, 0.6);
+            text-align: left;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .btn-ink {
+            background: var(--ink);
+            color: #fff;
+        }
+
+        .btn-ink:hover {
+            background: #0b1220;
+            color: #fff;
+        }
+
+        .btn-copper {
+            background: var(--copper);
+            color: #fff;
+        }
+
+        .btn-copper:hover {
+            background: #9a3412;
+            color: #fff;
+        }
+
+        .nav-link {
+            color: #e2e8f0;
+        }
+
+        .nav-link:hover {
+            color: #fff;
+        }
+
+        .topbar {
+            background: linear-gradient(90deg, #0f172a, #1e293b 40%, #0f172a);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.12);
+        }
+    </style>
+    {% block head_extra %}{% endblock %}
 </head>
+
 <body>
-<header>
-  <div><strong>Patrimoine</strong></div>
-  <div class="nav">
-    <a href="{% url 'public-map' %}">Carte publique</a>
-    {% if user.is_authenticated %}
-      <a href="{% url 'dashboard' %}">Dashboard</a>
-      <a href="{% url 'logout' %}">Logout</a>
-    {% else %}
-      <a href="{% url 'login' %}">Login</a>
-    {% endif %}
-  </div>
-</header>
-<main>
-  {% block content %}{% endblock %}
-</main>
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;">
+        {% if messages %}
+            {% for message in messages %}
+            <div class="toast align-items-center border-0 text-white {% if message.tags == 'error' %}bg-danger{% elif message.tags == 'warning' %}bg-warning text-dark{% elif message.tags == 'success' %}bg-success{% else %}bg-primary{% endif %}" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
+                <div class="d-flex">
+                    <div class="toast-body">{{ message }}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <nav class="navbar navbar-expand-lg navbar-dark topbar">
+        <div class="container-fluid app-shell px-3 px-lg-4">
+            <a class="navbar-brand text-white fw-semibold brand-title" href="{% url 'public-map' %}">Patrimoine</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="mainNav">
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'public-map' %}">Carte publique</a></li>
+                    {% if user.is_authenticated %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="nav-item"><a class="btn btn-sm btn-copper" href="{% url 'logout' %}">Logout</a></li>
+                    {% else %}
+                    <li class="nav-item"><a class="btn btn-sm btn-ink" href="{% url 'login' %}">Login</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <main class="container-fluid app-shell px-3 px-lg-4 py-4">
+        {% block content %}{% endblock %}
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+        <script>
+            document.querySelectorAll('.toast').forEach((toastEl) => {
+                const toast = new bootstrap.Toast(toastEl);
+                toast.show();
+            });
+        </script>
 </body>
+
 </html>

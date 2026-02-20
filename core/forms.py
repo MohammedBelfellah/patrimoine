@@ -5,7 +5,15 @@ from django.core.exceptions import ValidationError
 
 
 class EmailAuthenticationForm(AuthenticationForm):
-    username = forms.EmailField(label="Email", widget=forms.EmailInput(attrs={"autofocus": True}))
+    username = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(attrs={"autofocus": True, "class": "form-control"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "password" in self.fields:
+            self.fields["password"].widget.attrs.update({"class": "form-control"})
 
     def clean(self):
         email = self.cleaned_data.get("username")

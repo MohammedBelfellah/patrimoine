@@ -1,3 +1,5 @@
+import json
+
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
@@ -5,6 +7,7 @@ from django.contrib.auth.views import LoginView
 from django.shortcuts import redirect, render
 
 from .forms import EmailAuthenticationForm
+from patrimoine.models import Patrimoine, Region
 
 
 class UserLoginView(LoginView):
@@ -78,4 +81,37 @@ def public_dashboard_view(request):
 
 
 def public_map_view(request):
-    return render(request, "core/public_map.html")
+    patrimoines = Patrimoine.objects.select_related(
+        "id_commune__id_province__id_region"
+    ).all()
+
+    data = []
+    for p in patrimoines:
+        region = p.id_commune.id_province.id_region
+        province = p.id_commune.id_province
+        commune = p.id_commune
+        geom = json.loads(p.polygon_geom.geojson) if p.polygon_geom else None
+        data.append(
+            {
+                "id": p.id_patrimoine,
+                "nom": p.nom_fr,
+                "type": p.type_patrimoine,
+                "statut": p.statut,
+                "type_label": p.get_type_patrimoine_display(),
+                "statut_label": p.get_statut_display(),
+                "region_id": region.id_region,
+                "region_name": region.nom_region,
+                "province_name": province.nom_province,
+                "commune_name": commune.nom_commune,
+                "full_location": p.full_location,
+                "geom": geom,
+            }
+        )
+
+    context = {
+        "patrimoines_json": json.dumps(data),
+        "regions": Region.objects.all(),
+        "patrimoine_types": Patrimoine.PATRIMOINE_TYPES,
+        "patrimoine_statuts": Patrimoine.PATRIMOINE_STATUTS,
+    }
+    return render(request, "core/public_map.html", context)

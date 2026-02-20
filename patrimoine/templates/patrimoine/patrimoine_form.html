@@ -22,10 +22,6 @@
 <div class="card">
   <h2>{% if patrimoine %}Éditer: {{ patrimoine.nom_fr }}{% else %}Ajouter un nouveau patrimoine{% endif %}</h2>
 
-  {% if error %}
-  <div class="error">❌ {{ error }}</div>
-  {% endif %}
-
   <div class="info">ℹ️ Dessinez ou importez le polygone du patrimoine sur la carte ci-dessous.</div>
 
   <form method="post" enctype="multipart/form-data">
@@ -126,9 +122,14 @@
 
     <div>
       <label>Polygone géographique (WGS84) *</label>
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label for="spatial_file">Importer un fichier (KML ou Shapefile .zip)</label>
+        <input type="file" id="spatial_file" name="spatial_file" accept=".kml,.zip" />
+        <p class="muted"><small>Si vous importez un fichier, il remplacera le polygone dessiné.</small></p>
+      </div>
       <div id="map"></div>
-      <input type="hidden" id="geojson" name="geojson" value="" required />
-      <p class="muted"><small>Utilisez les outils de dessin pour créer le polygone, ou collez un GeoJSON valide.</small></p>
+      <input type="hidden" id="geojson" name="geojson" value="" />
+      <p class="muted"><small>Utilisez les outils de dessin pour créer le polygone, ou importez un fichier valide.</small></p>
     </div>
 
     <div>
@@ -140,6 +141,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://unpkg.com/@tmcw/togeojson@5.8.1/dist/togeojson.umd.js"></script>
 <script>
   const map = L.map('map').setView([31.7917, -7.0926], 6);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -237,11 +239,73 @@
       .catch(err => console.error('Error loading communes:', err));
   }
 
+  function geometryToMultiPolygon(geometry) {
+    if (!geometry) return null;
+    if (geometry.type === 'Polygon') {
+      return { type: 'MultiPolygon', coordinates: [geometry.coordinates] };
+    }
+    if (geometry.type === 'MultiPolygon') {
+      return geometry;
+    }
+    if (geometry.type === 'GeometryCollection') {
+      const polygonGeom = geometry.geometries.find(g => g.type === 'Polygon' || g.type === 'MultiPolygon');
+      return geometryToMultiPolygon(polygonGeom);
+    }
+    return null;
+  }
+
+  document.getElementById('spatial_file').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.kml')) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      try {
+        const xml = new DOMParser().parseFromString(event.target.result, 'text/xml');
+        const geo = toGeoJSON.kml(xml);
+        if (!geo.features || !geo.features.length) {
+          alert('Aucune géométrie trouvée dans le fichier KML');
+          return;
+        }
+
+        const featureWithPolygon = geo.features.find(f => {
+          const g = f.geometry;
+          return g && ['Polygon', 'MultiPolygon', 'GeometryCollection'].includes(g.type);
+        });
+
+        if (!featureWithPolygon) {
+          alert('Le KML doit contenir un polygone');
+          return;
+        }
+
+        const multiPolygon = geometryToMultiPolygon(featureWithPolygon.geometry);
+        if (!multiPolygon) {
+          alert('Impossible de convertir la géométrie KML en polygone');
+          return;
+        }
+
+        drawnItems.clearLayers();
+        const layer = L.geoJSON(multiPolygon).getLayers()[0];
+        drawnItems.addLayer(layer);
+        map.fitBounds(layer.getBounds());
+        document.getElementById('geojson').value = JSON.stringify(multiPolygon);
+      } catch (err) {
+        alert('Erreur de lecture du fichier KML');
+      }
+    };
+    reader.readAsText(file);
+  });
+
   {% if patrimoine.polygon_geom %}
   const geomJson = {{ patrimoine_geojson|safe }};
   const layer = L.geoJSON(geomJson).getLayers()[0];
   drawnItems.addLayer(layer);
   map.fitBounds(layer.getBounds());
+  document.getElementById('geojson').value = JSON.stringify(geomJson);
   {% endif %}
 
   // Image upload preview

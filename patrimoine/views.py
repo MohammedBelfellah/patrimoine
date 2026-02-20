@@ -1,9 +1,13 @@
+import json
 import os
+import tempfile
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group, User
-from django.contrib.gis.geos import GEOSGeometry
+from django.contrib import messages
+from django.contrib.gis.geos import GEOSGeometry, MultiPolygon
+from django.contrib.gis.gdal import DataSource
 from django.core.files.storage import default_storage
 from django.db import connection
 from django.http import JsonResponse
@@ -12,6 +16,52 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from .models import Commune, Document, Inspection, InspectionModificationRequest, Intervention, Patrimoine, Province, Region
+
+
+def _geometry_from_spatial_file(uploaded_file):
+    """Extract polygon geometry from uploaded KML or Shapefile zip."""
+    filename = uploaded_file.name.lower()
+    if not (filename.endswith(".kml") or filename.endswith(".zip")):
+        raise ValueError("Formats acceptes: .kml ou .zip (shapefile)")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        file_path = os.path.join(tmpdir, uploaded_file.name)
+        with open(file_path, "wb") as f:
+            for chunk in uploaded_file.chunks():
+                f.write(chunk)
+
+        ds_path = file_path
+        if filename.endswith(".zip"):
+            ds_path = f"/vsizip/{file_path}"
+
+        ds = DataSource(ds_path)
+        if len(ds) == 0:
+            raise ValueError("Fichier spatial vide ou illisible")
+
+        layer = ds[0]
+        if len(layer) == 0:
+            raise ValueError("Aucune geometrie dans le fichier")
+
+        g = None
+        for feature in layer:
+            if not feature.geom:
+                continue
+            candidate = GEOSGeometry(feature.geom.geojson)
+            if candidate.geom_type == "Polygon":
+                g = MultiPolygon(candidate)
+                break
+            if candidate.geom_type == "MultiPolygon":
+                g = candidate
+                break
+
+        if g is None:
+            raise ValueError("Le fichier doit contenir au moins un polygone")
+
+        if g.geom_type == "Polygon":
+            g = MultiPolygon(g)
+        elif g.geom_type != "MultiPolygon":
+            raise ValueError("Le fichier doit contenir un polygone")
+
+        return g
 
 
 def _can_edit(user):
@@ -92,11 +142,12 @@ def patrimoine_create(request):
             statut = request.POST.get("statut", "EN_ETUDE").strip()
             reference_administrative = request.POST.get("reference_administrative", "").strip()
             geojson_str = request.POST.get("geojson", "").strip()
+            spatial_file = request.FILES.get("spatial_file")
             id_commune = request.POST.get("id_commune", "").strip()
 
-            if not all([nom_fr, type_patrimoine, id_commune, geojson_str]):
+            if not all([nom_fr, type_patrimoine, id_commune]) or (not geojson_str and not spatial_file):
+                messages.error(request, "Champs obligatoires manquants (Nom, Type, Commune, Polygone)")
                 context = {
-                    "error": "Champs obligatoires manquants (Nom, Type, Commune, Polygone)",
                     "regions": Region.objects.all(),
                     "provinces": Province.objects.all(),
                     "communes": Commune.objects.all(),
@@ -122,7 +173,10 @@ def patrimoine_create(request):
                     raise ValueError(f"Format non autorisé pour '{uploaded_file.name}'. Formats acceptés: JPG, PNG, GIF, WEBP")
 
             commune = Commune.objects.get(id_commune=id_commune)
-            polygon_geom = GEOSGeometry(geojson_str)
+            if spatial_file:
+                polygon_geom = _geometry_from_spatial_file(spatial_file)
+            else:
+                polygon_geom = GEOSGeometry(geojson_str)
 
             # Use raw SQL to avoid GENERATED column issue with centroid_geom
             with connection.cursor() as cursor:
@@ -169,10 +223,11 @@ def patrimoine_create(request):
                     id_patrimoine_id=patrimoine_id,
                 )
 
+            messages.success(request, "Patrimoine créé avec succès")
             return redirect("patrimoine-detail", id_patrimoine=patrimoine_id)
         except Exception as e:
+            messages.error(request, str(e))
             context = {
-                "error": str(e),
                 "regions": Region.objects.all(),
                 "provinces": Province.objects.all(),
                 "communes": Commune.objects.all(),
@@ -296,13 +351,15 @@ def patrimoine_edit(request, id_patrimoine):
                     id_patrimoine=patrimoine,
                 )
 
+            messages.success(request, "Patrimoine mis à jour avec succès")
             return redirect("patrimoine-detail", id_patrimoine=patrimoine.id_patrimoine)
         except Exception as e:
+            messages.error(request, str(e))
             current_images = Document.objects.filter(id_patrimoine=patrimoine, type_document="IMAGE").order_by("uploaded_at")
             context = {
                 "patrimoine": patrimoine,
                 "current_images": current_images,
-                "error": str(e),
+                "patrimoine_geojson": json.dumps(json.loads(patrimoine.polygon_geom.geojson)) if patrimoine.polygon_geom else "null",
                 "regions": Region.objects.all(),
                 "provinces": Province.objects.filter(id_region=patrimoine.id_commune.id_province.id_region),
                 "communes": Commune.objects.filter(id_province=patrimoine.id_commune.id_province),
@@ -315,6 +372,7 @@ def patrimoine_edit(request, id_patrimoine):
     context = {
         "patrimoine": patrimoine,
         "current_images": current_images,
+        "patrimoine_geojson": json.dumps(json.loads(patrimoine.polygon_geom.geojson)) if patrimoine.polygon_geom else "null",
         "regions": Region.objects.all(),
         "provinces": Province.objects.filter(id_region=patrimoine.id_commune.id_province.id_region),
         "communes": Commune.objects.filter(id_province=patrimoine.id_commune.id_province),
@@ -339,9 +397,25 @@ def patrimoine_delete(request, id_patrimoine):
 @login_required
 def patrimoine_map(request):
     """Interactive map for viewing/creating patrimoine."""
-    patrimoines = Patrimoine.objects.all()
+    patrimoines = Patrimoine.objects.select_related(
+        "id_commune__id_province__id_region"
+    ).all()
+
+    data = []
+    for p in patrimoines:
+        geom = json.loads(p.polygon_geom.geojson) if p.polygon_geom else None
+        data.append(
+            {
+                "id": p.id_patrimoine,
+                "nom": p.nom_fr,
+                "type": p.type_patrimoine,
+                "geom": geom,
+            }
+        )
+
     context = {
         "patrimoines": patrimoines,
+        "patrimoines_json": json.dumps(data),
         "can_edit": _can_edit(request.user),
     }
     return render(request, "patrimoine/patrimoine_map.html", context)

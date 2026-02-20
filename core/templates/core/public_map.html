@@ -8,14 +8,138 @@
   crossorigin=""
 />
 <style>
-  #map { height: 70vh; border-radius: 8px; }
+  .public-shell {
+    display: grid;
+    grid-template-columns: minmax(240px, 300px) 1fr;
+    gap: 12px;
+  }
+  #map {
+    height: 90vh;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+  }
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .tool-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .list-panel {
+    max-height: 34vh;
+    overflow: auto;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 12px;
+    padding: 10px;
+    background: #fff;
+  }
+  .list-item {
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    margin-bottom: 6px;
+    cursor: pointer;
+  }
+  .list-item:hover { background: #f8fafc; border-color: rgba(148, 163, 184, 0.3); }
+  .list-item.active { background: #e0f2fe; border-color: #38bdf8; }
+  .detail-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+  }
+  @media (max-width: 992px) {
+    .public-shell { grid-template-columns: 1fr; }
+    #map { height: 75vh; }
+  }
 </style>
 {% endblock %}
 {% block content %}
-<div class="card">
-  <h2>Carte publique du patrimoine</h2>
-  <p class="muted">Version MVP: fond de carte OpenStreetMap.</p>
-  <div id="map"></div>
+<div class="public-shell">
+  <div class="sidebar">
+    <div class="app-card">
+      <h2 class="mb-1">Carte publique</h2>
+      <p class="muted mb-0">Explorez les patrimoines par type, statut et localisation.</p>
+    </div>
+
+    <div class="app-card">
+      <h5 class="mb-3">Filtres</h5>
+      <label for="searchInput">Recherche</label>
+      <input id="searchInput" type="text" placeholder="Nom du patrimoine..." />
+
+      <label for="typeFilter">Type</label>
+      <select id="typeFilter">
+        <option value="">Tous les types</option>
+        {% for code, label in patrimoine_types %}
+        <option value="{{ code }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="statusFilter">Statut</label>
+      <select id="statusFilter">
+        <option value="">Tous les statuts</option>
+        {% for code, label in patrimoine_statuts %}
+        <option value="{{ code }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="regionFilter">Région</label>
+      <select id="regionFilter">
+        <option value="">Toutes les régions</option>
+        {% for region in regions %}
+        <option value="{{ region.id_region }}">{{ region.nom_region }}</option>
+        {% endfor %}
+      </select>
+
+      <div class="tool-grid">
+        <button type="button" class="btn btn-ink" id="applyFilters">Appliquer</button>
+        <button type="button" class="btn btn-outline-secondary" id="resetFilters">Reset</button>
+      </div>
+    </div>
+
+    <div class="app-card">
+      <h5 class="mb-2">Outils GIS</h5>
+      <div class="tool-grid">
+        <button type="button" class="btn btn-copper" id="locateBtn">Ma position</button>
+        <button type="button" class="btn btn-outline-primary" id="printBtn">Imprimer</button>
+      </div>
+      <div class="detail-card mt-3">
+        <div class="small muted">Coordonnées sélectionnées</div>
+        <div id="coordText" class="fw-semibold">Cliquer sur la carte</div>
+        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="copyCoords">Copier</button>
+      </div>
+    </div>
+
+    <div class="app-card">
+      <h5 class="mb-2">Patrimoines visibles</h5>
+      <div class="list-panel" id="patrimoineList"></div>
+    </div>
+
+    <div class="app-card">
+      <h5 class="mb-2">Détails</h5>
+      <div class="detail-card" id="detailCard">
+        <div class="muted">Sélectionnez un patrimoine sur la carte ou dans la liste.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-card">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <div>
+        <h3 class="mb-1">Patrimoine du Maroc</h3>
+        <p class="muted mb-0">Zoom, sélection, recherche et filtrage en direct.</p>
+      </div>
+      <div class="d-flex gap-2">
+        <span class="badge text-bg-light" style="border: 1px solid rgba(15, 118, 110, 0.3); color: #0f766e;">Historique</span>
+        <span class="badge text-bg-light" style="border: 1px solid rgba(194, 65, 12, 0.3); color: #c2410c;">Naturel</span>
+      </div>
+    </div>
+    <div id="map"></div>
+  </div>
 </div>
 <script
   src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -23,10 +147,169 @@
   crossorigin=""
 ></script>
 <script>
-  const map = L.map('map').setView([31.7917, -7.0926], 6);
+  const map = L.map('map', { zoomControl: true }).setView([31.7917, -7.0926], 6);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
+  L.control.scale({ imperial: false }).addTo(map);
+
+  const patrimoines = {{ patrimoines_json|safe }};
+  const listEl = document.getElementById('patrimoineList');
+  const detailCard = document.getElementById('detailCard');
+  const coordText = document.getElementById('coordText');
+  const layerGroup = L.geoJSON(null, { style: featureStyle }).addTo(map);
+  const layerIndex = new Map();
+  let selectedId = null;
+  let lastCoords = null;
+
+  function featureStyle(feature) {
+    const type = feature?.properties?.type || '';
+    const color = type === 'HISTORIQUE' ? '#0ea5e9'
+      : type === 'NATUREL' ? '#10b981'
+      : type === 'MONDIAL' ? '#f97316'
+      : '#64748b';
+    return { color, weight: 2, fillOpacity: 0.25 };
+  }
+
+  function selectedStyle() {
+    return { color: '#c2410c', weight: 3, fillOpacity: 0.35 };
+  }
+
+  function buildFeatures(data) {
+    layerGroup.clearLayers();
+    layerIndex.clear();
+    data.forEach((p) => {
+      if (!p.geom) { return; }
+      const feature = {
+        type: 'Feature',
+        properties: {
+          id: p.id,
+          nom: p.nom,
+          type: p.type,
+          statut: p.statut,
+          region: p.region_name,
+          province: p.province_name,
+          commune: p.commune_name,
+        },
+        geometry: p.geom,
+      };
+      const layer = L.geoJSON(feature, { style: featureStyle });
+      layer.eachLayer((shape) => {
+        shape.on('click', () => selectPatrimoine(p.id));
+      });
+      layerGroup.addLayer(layer);
+      layerIndex.set(p.id, layer);
+    });
+
+    if (data.length) {
+      const bounds = layerGroup.getBounds();
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [30, 30] });
+      }
+    }
+  }
+
+  function renderList(data) {
+    listEl.innerHTML = '';
+    data.forEach((p) => {
+      const item = document.createElement('div');
+      item.className = 'list-item' + (p.id === selectedId ? ' active' : '');
+      item.innerHTML = `<strong>${p.nom}</strong><div class="small muted">${p.region_name} · ${p.type}</div>`;
+      item.addEventListener('click', () => selectPatrimoine(p.id));
+      listEl.appendChild(item);
+    });
+  }
+
+  function selectPatrimoine(id) {
+    selectedId = id;
+    layerIndex.forEach((layer, key) => {
+      if (key === id) {
+        layer.setStyle(selectedStyle());
+        const bounds = layer.getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [30, 30] });
+        }
+      } else {
+        layer.setStyle(featureStyle);
+      }
+    });
+
+    const p = patrimoines.find((item) => item.id === id);
+    if (!p) { return; }
+    detailCard.innerHTML = `
+      <div class="fw-semibold mb-1">${p.nom}</div>
+      <div class="small muted">${p.full_location}</div>
+      <div class="mt-2"><span class="badge text-bg-light">${p.type_label}</span> <span class="badge text-bg-light">${p.statut_label}</span></div>
+      <div class="mt-2 small">Region: ${p.region_name || '-'}<br>Province: ${p.province_name || '-'}<br>Commune: ${p.commune_name || '-'}</div>
+    `;
+    renderList(currentFiltered);
+  }
+
+  function getFilters() {
+    return {
+      search: document.getElementById('searchInput').value.trim().toLowerCase(),
+      type: document.getElementById('typeFilter').value,
+      status: document.getElementById('statusFilter').value,
+      region: document.getElementById('regionFilter').value,
+    };
+  }
+
+  function applyFilters() {
+    const { search, type, status, region } = getFilters();
+    currentFiltered = patrimoines.filter((p) => {
+      const matchesSearch = !search || p.nom.toLowerCase().includes(search);
+      const matchesType = !type || p.type === type;
+      const matchesStatus = !status || p.statut === status;
+      const matchesRegion = !region || String(p.region_id) === String(region);
+      return matchesSearch && matchesType && matchesStatus && matchesRegion;
+    });
+    buildFeatures(currentFiltered);
+    renderList(currentFiltered);
+    if (!currentFiltered.length) {
+      detailCard.innerHTML = '<div class="muted">Aucun patrimoine ne correspond aux filtres.</div>';
+    }
+  }
+
+  let currentFiltered = [...patrimoines];
+  buildFeatures(currentFiltered);
+  renderList(currentFiltered);
+
+  document.getElementById('applyFilters').addEventListener('click', applyFilters);
+  document.getElementById('resetFilters').addEventListener('click', () => {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('typeFilter').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('regionFilter').value = '';
+    applyFilters();
+  });
+  document.getElementById('searchInput').addEventListener('input', () => {
+    if (document.getElementById('searchInput').value.length >= 2 || document.getElementById('searchInput').value.length === 0) {
+      applyFilters();
+    }
+  });
+
+  map.on('click', (event) => {
+    const { lat, lng } = event.latlng;
+    lastCoords = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    coordText.textContent = lastCoords;
+  });
+
+  document.getElementById('copyCoords').addEventListener('click', async () => {
+    if (!lastCoords) { return; }
+    try {
+      await navigator.clipboard.writeText(lastCoords);
+    } catch (e) {
+      // Fallback: ignore
+    }
+  });
+
+  document.getElementById('locateBtn').addEventListener('click', () => {
+    map.locate({ setView: true, maxZoom: 14 });
+  });
+
+  document.getElementById('printBtn').addEventListener('click', () => {
+    window.print();
+  });
 </script>
 {% endblock %}

@@ -1,6 +1,10 @@
+import os
+from decimal import Decimal
+
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group, User
 from django.contrib.gis.geos import GEOSGeometry
+from django.core.files.storage import default_storage
 from django.db import connection
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -57,13 +61,16 @@ def patrimoine_list(request):
 
 @login_required
 def patrimoine_detail(request, id_patrimoine):
-    """Display patrimoine details."""
+    """Display patrimoine details with uploaded images."""
     if not _can_view(request.user):
         return redirect("public-map")
 
     patrimoine = get_object_or_404(Patrimoine, id_patrimoine=id_patrimoine)
+    images = Document.objects.filter(id_patrimoine=patrimoine, type_document="IMAGE").order_by("uploaded_at")
+    
     context = {
         "patrimoine": patrimoine,
+        "images": images,
         "can_edit": _can_edit(request.user),
     }
     return render(request, "patrimoine/patrimoine_detail.html", context)
@@ -72,7 +79,7 @@ def patrimoine_detail(request, id_patrimoine):
 @login_required
 @require_http_methods(["GET", "POST"])
 def patrimoine_create(request):
-    """Create new patrimoine."""
+    """Create new patrimoine with optional image uploads (max 5 images, 5MB each)."""
     if not _can_edit(request.user):
         return redirect("patrimoine-list")
 
@@ -97,6 +104,22 @@ def patrimoine_create(request):
                     "patrimoine_statuts": Patrimoine.PATRIMOINE_STATUTS,
                 }
                 return render(request, "patrimoine/patrimoine_form.html", context)
+
+            # Validate uploaded files
+            uploaded_files = request.FILES.getlist("images")
+            if len(uploaded_files) > 5:
+                raise ValueError("Maximum 5 images autorisées")
+            
+            MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB in bytes
+            ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+            
+            for uploaded_file in uploaded_files:
+                if uploaded_file.size > MAX_FILE_SIZE:
+                    raise ValueError(f"L'image '{uploaded_file.name}' dépasse 5MB")
+                
+                ext = os.path.splitext(uploaded_file.name)[1].lower()
+                if ext not in ALLOWED_EXTENSIONS:
+                    raise ValueError(f"Format non autorisé pour '{uploaded_file.name}'. Formats acceptés: JPG, PNG, GIF, WEBP")
 
             commune = Commune.objects.get(id_commune=id_commune)
             polygon_geom = GEOSGeometry(geojson_str)
@@ -127,6 +150,25 @@ def patrimoine_create(request):
                 )
                 patrimoine_id = cursor.fetchone()[0]
 
+            # Save uploaded images to Document table
+            for uploaded_file in uploaded_files:
+                # Create directory structure: patrimoine/{patrimoine_id}/
+                file_path = f"patrimoine/{patrimoine_id}/{uploaded_file.name}"
+                saved_path = default_storage.save(file_path, uploaded_file)
+                
+                # Calculate file size in MB
+                file_size_mb = Decimal(uploaded_file.size) / Decimal(1024 * 1024)
+                
+                # Create Document record
+                Document.objects.create(
+                    type_document="IMAGE",
+                    file_name=uploaded_file.name,
+                    file_path=saved_path,
+                    file_size_mb=round(file_size_mb, 2),
+                    uploaded_by=request.user,
+                    id_patrimoine_id=patrimoine_id,
+                )
+
             return redirect("patrimoine-detail", id_patrimoine=patrimoine_id)
         except Exception as e:
             context = {
@@ -152,7 +194,7 @@ def patrimoine_create(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def patrimoine_edit(request, id_patrimoine):
-    """Edit existing patrimoine."""
+    """Edit existing patrimoine with optional image uploads (max 5 total images)."""
     if not _can_edit(request.user):
         return redirect("patrimoine-list")
 
@@ -168,6 +210,24 @@ def patrimoine_edit(request, id_patrimoine):
             reference_administrative = request.POST.get("reference_administrative", patrimoine.reference_administrative or "").strip()
             geojson_str = request.POST.get("geojson", "").strip()
             id_commune = request.POST.get("id_commune", "").strip()
+
+            # Validate uploaded files
+            uploaded_files = request.FILES.getlist("images")
+            current_images_count = Document.objects.filter(id_patrimoine=patrimoine, type_document="IMAGE").count()
+            
+            if current_images_count + len(uploaded_files) > 5:
+                raise ValueError(f"Maximum 5 images au total. Actuellement: {current_images_count}, tentative d'ajout: {len(uploaded_files)}")
+            
+            MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB in bytes
+            ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+            
+            for uploaded_file in uploaded_files:
+                if uploaded_file.size > MAX_FILE_SIZE:
+                    raise ValueError(f"L'image '{uploaded_file.name}' dépasse 5MB")
+                
+                ext = os.path.splitext(uploaded_file.name)[1].lower()
+                if ext not in ALLOWED_EXTENSIONS:
+                    raise ValueError(f"Format non autorisé pour '{uploaded_file.name}'. Formats acceptés: JPG, PNG, GIF, WEBP")
 
             # Use raw SQL to avoid GENERATED column issue
             with connection.cursor() as cursor:
@@ -217,10 +277,31 @@ def patrimoine_edit(request, id_patrimoine):
                         ],
                     )
 
+            # Save uploaded images to Document table
+            for uploaded_file in uploaded_files:
+                # Create directory structure: patrimoine/{patrimoine_id}/
+                file_path = f"patrimoine/{patrimoine.id_patrimoine}/{uploaded_file.name}"
+                saved_path = default_storage.save(file_path, uploaded_file)
+                
+                # Calculate file size in MB
+                file_size_mb = Decimal(uploaded_file.size) / Decimal(1024 * 1024)
+                
+                # Create Document record
+                Document.objects.create(
+                    type_document="IMAGE",
+                    file_name=uploaded_file.name,
+                    file_path=saved_path,
+                    file_size_mb=round(file_size_mb, 2),
+                    uploaded_by=request.user,
+                    id_patrimoine=patrimoine,
+                )
+
             return redirect("patrimoine-detail", id_patrimoine=patrimoine.id_patrimoine)
         except Exception as e:
+            current_images = Document.objects.filter(id_patrimoine=patrimoine, type_document="IMAGE").order_by("uploaded_at")
             context = {
                 "patrimoine": patrimoine,
+                "current_images": current_images,
                 "error": str(e),
                 "regions": Region.objects.all(),
                 "provinces": Province.objects.filter(id_region=patrimoine.id_commune.id_province.id_region),
@@ -230,8 +311,10 @@ def patrimoine_edit(request, id_patrimoine):
             }
             return render(request, "patrimoine/patrimoine_form.html", context)
 
+    current_images = Document.objects.filter(id_patrimoine=patrimoine, type_document="IMAGE").order_by("uploaded_at")
     context = {
         "patrimoine": patrimoine,
+        "current_images": current_images,
         "regions": Region.objects.all(),
         "provinces": Province.objects.filter(id_region=patrimoine.id_commune.id_province.id_region),
         "communes": Commune.objects.filter(id_province=patrimoine.id_commune.id_province),
@@ -552,6 +635,32 @@ def document_list(request):
     return render(request, "patrimoine/document_list.html", context)
 
 
+@login_required
+@require_http_methods(["POST"])
+def document_delete(request, id_document):
+    """Delete a document/image (creator or admin only)."""
+    document = get_object_or_404(Document, id_document=id_document)
+    
+    # Only creator, admin, or superadmin can delete
+    if not (request.user.is_superuser or 
+            request.user.groups.filter(name="ADMIN").exists() or 
+            document.uploaded_by == request.user):
+        return redirect("patrimoine-detail", id_patrimoine=document.id_patrimoine.id_patrimoine)
+    
+    patrimoine_id = document.id_patrimoine.id_patrimoine if document.id_patrimoine else None
+    
+    # Delete physical file
+    if document.file_path and default_storage.exists(document.file_path):
+        default_storage.delete(document.file_path)
+    
+    # Delete database record
+    document.delete()
+    
+    if patrimoine_id:
+        return redirect("patrimoine-detail", id_patrimoine=patrimoine_id)
+    return redirect("document-list")
+
+
 # ====================== USERS MANAGEMENT (Superadmin) ======================
 @login_required
 def user_management(request):
@@ -559,10 +668,50 @@ def user_management(request):
     if not request.user.is_superuser:
         return redirect("dashboard")
 
+    error = ""
+    success = ""
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip().lower()
+        username = request.POST.get("username", "").strip()
+        password = request.POST.get("password", "")
+        role = request.POST.get("role", "").strip().upper()
+
+        if not email or not username or not password:
+            error = "Tous les champs sont obligatoires."
+        elif role not in {"ADMIN", "INSPECTEUR", "PUBLIC"}:
+            error = "Rôle invalide."
+        elif User.objects.filter(email=email).exists():
+            error = "Cet email est déjà utilisé."
+        elif User.objects.filter(username=username).exists():
+            error = "Ce nom d'utilisateur est déjà utilisé."
+        else:
+            new_user = User.objects.create_user(username=username, email=email, password=password)
+            new_user.is_active = True
+            new_user.is_staff = role == "ADMIN"
+            new_user.save()
+
+            if role == "ADMIN":
+                new_user.groups.add(Group.objects.get(name="ADMIN"))
+            elif role == "INSPECTEUR":
+                new_user.groups.add(Group.objects.get(name="INSPECTEUR"))
+
+            success = "Utilisateur créé avec succès."
+
     users = User.objects.all().prefetch_related("groups")
+    for user in users:
+        group_names = list(user.groups.values_list("name", flat=True))
+        user.group_names = group_names
+        user.is_admin = "ADMIN" in group_names
+        user.is_inspecteur = "INSPECTEUR" in group_names
     admin_group = Group.objects.get(name="ADMIN")
     inspecteur_group = Group.objects.get(name="INSPECTEUR")
-    context = {"users": users, "admin_group": admin_group, "inspecteur_group": inspecteur_group}
+    context = {
+        "users": users,
+        "admin_group": admin_group,
+        "inspecteur_group": inspecteur_group,
+        "error": error,
+        "success": success,
+    }
     return render(request, "core/user_management.html", context)
 
 

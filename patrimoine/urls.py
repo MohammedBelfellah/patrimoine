@@ -22,4 +22,5 @@ urlpatterns = [
     path("interventions/", views.intervention_list, name="intervention-list"),
     path("interventions/create/", views.intervention_create, name="intervention-create"),
     path("documents/", views.document_list, name="document-list"),
+    path("documents/<int:id_document>/delete/", views.document_delete, name="document-delete"),
 ]

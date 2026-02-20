@@ -1,0 +1,52 @@
+{% extends "core/base.html" %}
+{% block title %}Intervention - {{ intervention.nom_projet }}{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>🔧 {{ intervention.nom_projet }}</h2>
+    <p class="muted">Patrimoine: <strong>{{ intervention.id_patrimoine.nom_fr }}</strong></p>
+
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 16px;">
+        <div>
+            <strong>Type:</strong>
+            <p>{{ intervention.get_type_intervention_display }}</p>
+        </div>
+        <div>
+            <strong>Statut:</strong>
+            <p>{{ intervention.get_statut_display }}</p>
+        </div>
+        <div>
+            <strong>Date début:</strong>
+            <p>{{ intervention.date_debut|date:"d/m/Y" }}</p>
+        </div>
+        <div>
+            <strong>Date fin:</strong>
+            <p>{{ intervention.date_fin|date:"d/m/Y"|default:"-" }}</p>
+        </div>
+        <div>
+            <strong>Prestataire:</strong>
+            <p>{{ intervention.prestataire|default:"-" }}</p>
+        </div>
+        <div>
+            <strong>Créé par:</strong>
+            <p>{{ intervention.created_by.email }}</p>
+        </div>
+    </div>
+
+    {% if intervention.description %}
+    <div style="margin-top: 12px;">
+        <strong>Description:</strong>
+        <p>{{ intervention.description }}</p>
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 20px; display: flex; gap: 10px;">
+        <a href="{% url 'intervention-edit' intervention.id_intervention %}" class="btn btn-primary">Éditer</a>
+        <form method="post" action="{% url 'intervention-delete' intervention.id_intervention %}"
+            onsubmit="return confirm('Supprimer cette intervention ?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Supprimer</button>
+        </form>
+        <a href="{% url 'intervention-list' %}" class="btn btn-secondary">Retour</a>
+    </div>
+</div>
+{% endblock %}

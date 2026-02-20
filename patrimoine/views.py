@@ -654,9 +654,23 @@ def intervention_list(request):
     """List interventions."""
     if not _can_edit(request.user):
         return redirect("patrimoine-list")
-    interventions = Intervention.objects.select_related("id_patrimoine", "created_by").all()
+    interventions = Intervention.objects.select_related("id_patrimoine", "created_by").order_by("-created_at")
     context = {"interventions": interventions}
     return render(request, "patrimoine/intervention_list.html", context)
+
+
+@login_required
+def intervention_detail(request, id_intervention):
+    """Show intervention details."""
+    if not _can_edit(request.user):
+        return redirect("intervention-list")
+
+    intervention = get_object_or_404(
+        Intervention.objects.select_related("id_patrimoine", "created_by"),
+        id_intervention=id_intervention,
+    )
+    context = {"intervention": intervention}
+    return render(request, "patrimoine/intervention_detail.html", context)
 
 
 @login_required
@@ -667,14 +681,32 @@ def intervention_create(request):
         return redirect("intervention-list")
 
     if request.method == "POST":
+        form_data = {
+            "id_region": request.POST.get("id_region", "").strip(),
+            "id_province": request.POST.get("id_province", "").strip(),
+            "id_commune": request.POST.get("id_commune", "").strip(),
+            "id_patrimoine": request.POST.get("id_patrimoine", "").strip(),
+            "nom_projet": request.POST.get("nom_projet", "").strip(),
+            "type_intervention": request.POST.get("type_intervention", "").strip(),
+            "date_debut": request.POST.get("date_debut", "").strip(),
+            "date_fin": request.POST.get("date_fin", "").strip(),
+            "prestataire": request.POST.get("prestataire", "").strip(),
+            "description": request.POST.get("description", "").strip(),
+        }
         try:
-            id_patrimoine = request.POST.get("id_patrimoine", "").strip()
-            nom_projet = request.POST.get("nom_projet", "").strip()
-            type_intervention = request.POST.get("type_intervention", "").strip()
-            date_debut = request.POST.get("date_debut", "").strip()
-            date_fin = request.POST.get("date_fin", "").strip()
-            prestataire = request.POST.get("prestataire", "").strip()
-            description = request.POST.get("description", "").strip()
+            id_patrimoine = form_data["id_patrimoine"]
+            nom_projet = form_data["nom_projet"]
+            type_intervention = form_data["type_intervention"]
+            statut = request.POST.get("statut", "PLANIFIEE").strip() or "PLANIFIEE"
+            date_debut = form_data["date_debut"]
+            date_fin = form_data["date_fin"]
+            prestataire = form_data["prestataire"]
+            description = form_data["description"]
+
+            if not id_patrimoine:
+                raise ValueError("Veuillez sélectionner un patrimoine")
+            if not nom_projet or not type_intervention or not date_debut:
+                raise ValueError("Champs obligatoires manquants")
 
             patrimoine = Patrimoine.objects.get(id_patrimoine=id_patrimoine)
             Intervention.objects.create(
@@ -685,19 +717,125 @@ def intervention_create(request):
                 date_fin=date_fin or None,
                 prestataire=prestataire,
                 description=description,
+                statut=statut,
                 created_by=request.user,
             )
+            messages.success(request, "Intervention créée avec succès")
             return redirect("intervention-list")
         except Exception as e:
-            return render(request, "patrimoine/intervention_form.html", {"error": str(e)})
+            messages.error(request, str(e))
+            context = {
+                "regions": Region.objects.all(),
+                "patrimoines": Patrimoine.objects.select_related("id_commune").all(),
+                "intervention_types": Intervention.INTERVENTION_TYPES,
+                "intervention_statuts": Intervention.INTERVENTION_STATUTS,
+                "form_data": form_data,
+                "is_edit": False,
+            }
+            return render(request, "patrimoine/intervention_form.html", context)
 
     context = {
         "regions": Region.objects.all(),
-        "patrimoines": Patrimoine.objects.all(),
+        "patrimoines": Patrimoine.objects.select_related("id_commune").all(),
         "intervention_types": Intervention.INTERVENTION_TYPES,
         "intervention_statuts": Intervention.INTERVENTION_STATUTS,
+        "form_data": {},
+        "is_edit": False,
     }
     return render(request, "patrimoine/intervention_form.html", context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def intervention_edit(request, id_intervention):
+    """Edit intervention."""
+    if not _can_edit(request.user):
+        return redirect("intervention-list")
+
+    intervention = get_object_or_404(Intervention, id_intervention=id_intervention)
+
+    if request.method == "POST":
+        form_data = {
+            "id_region": request.POST.get("id_region", "").strip(),
+            "id_province": request.POST.get("id_province", "").strip(),
+            "id_commune": request.POST.get("id_commune", "").strip(),
+            "id_patrimoine": request.POST.get("id_patrimoine", "").strip(),
+            "nom_projet": request.POST.get("nom_projet", "").strip(),
+            "type_intervention": request.POST.get("type_intervention", "").strip(),
+            "statut": request.POST.get("statut", intervention.statut).strip(),
+            "date_debut": request.POST.get("date_debut", "").strip(),
+            "date_fin": request.POST.get("date_fin", "").strip(),
+            "prestataire": request.POST.get("prestataire", "").strip(),
+            "description": request.POST.get("description", "").strip(),
+        }
+        try:
+            if not form_data["id_patrimoine"]:
+                raise ValueError("Veuillez sélectionner un patrimoine")
+            if not form_data["nom_projet"] or not form_data["type_intervention"] or not form_data["date_debut"]:
+                raise ValueError("Champs obligatoires manquants")
+
+            patrimoine = Patrimoine.objects.get(id_patrimoine=form_data["id_patrimoine"])
+            intervention.id_patrimoine = patrimoine
+            intervention.nom_projet = form_data["nom_projet"]
+            intervention.type_intervention = form_data["type_intervention"]
+            intervention.statut = form_data["statut"]
+            intervention.date_debut = form_data["date_debut"]
+            intervention.date_fin = form_data["date_fin"] or None
+            intervention.prestataire = form_data["prestataire"]
+            intervention.description = form_data["description"]
+            intervention.save()
+
+            messages.success(request, "Intervention mise à jour avec succès")
+            return redirect("intervention-detail", id_intervention=intervention.id_intervention)
+        except Exception as e:
+            messages.error(request, str(e))
+            context = {
+                "intervention": intervention,
+                "regions": Region.objects.all(),
+                "patrimoines": Patrimoine.objects.select_related("id_commune").all(),
+                "intervention_types": Intervention.INTERVENTION_TYPES,
+                "intervention_statuts": Intervention.INTERVENTION_STATUTS,
+                "form_data": form_data,
+                "is_edit": True,
+            }
+            return render(request, "patrimoine/intervention_form.html", context)
+
+    form_data = {
+        "id_region": str(intervention.id_patrimoine.id_commune.id_province.id_region.id_region),
+        "id_province": str(intervention.id_patrimoine.id_commune.id_province.id_province),
+        "id_commune": str(intervention.id_patrimoine.id_commune.id_commune),
+        "id_patrimoine": str(intervention.id_patrimoine.id_patrimoine),
+        "nom_projet": intervention.nom_projet,
+        "type_intervention": intervention.type_intervention,
+        "statut": intervention.statut,
+        "date_debut": intervention.date_debut.isoformat() if intervention.date_debut else "",
+        "date_fin": intervention.date_fin.isoformat() if intervention.date_fin else "",
+        "prestataire": intervention.prestataire or "",
+        "description": intervention.description or "",
+    }
+    context = {
+        "intervention": intervention,
+        "regions": Region.objects.all(),
+        "patrimoines": Patrimoine.objects.select_related("id_commune").all(),
+        "intervention_types": Intervention.INTERVENTION_TYPES,
+        "intervention_statuts": Intervention.INTERVENTION_STATUTS,
+        "form_data": form_data,
+        "is_edit": True,
+    }
+    return render(request, "patrimoine/intervention_form.html", context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def intervention_delete(request, id_intervention):
+    """Delete intervention."""
+    if not _can_edit(request.user):
+        return redirect("intervention-list")
+
+    intervention = get_object_or_404(Intervention, id_intervention=id_intervention)
+    intervention.delete()
+    messages.success(request, "Intervention supprimée avec succès")
+    return redirect("intervention-list")
 
 
 # ====================== DOCUMENTS ======================

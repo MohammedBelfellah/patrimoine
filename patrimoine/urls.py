@@ -21,6 +21,9 @@ urlpatterns = [
     path("inspection-requests/<int:id_request>/reject/", views.inspection_request_reject, name="inspection-request-reject"),
     path("interventions/", views.intervention_list, name="intervention-list"),
     path("interventions/create/", views.intervention_create, name="intervention-create"),
+    path("interventions/<int:id_intervention>/", views.intervention_detail, name="intervention-detail"),
+    path("interventions/<int:id_intervention>/edit/", views.intervention_edit, name="intervention-edit"),
+    path("interventions/<int:id_intervention>/delete/", views.intervention_delete, name="intervention-delete"),
     path("documents/", views.document_list, name="document-list"),
     path("documents/<int:id_document>/delete/", views.document_delete, name="document-delete"),
 ]

@@ -1,5 +1,5 @@
 {% extends "core/base.html" %}
-{% block title %}Ajouter intervention{% endblock %}
+{% block title %}{% if is_edit %}Éditer intervention{% else %}Ajouter intervention{% endif %}{% endblock %}
 {% block head_extra %}
 <style>
   form { display: flex; flex-direction: column; gap: 16px; }
@@ -16,11 +16,7 @@
 {% endblock %}
 {% block content %}
 <div class="card">
-  <h2>Ajouter une intervention</h2>
-
-  {% if error %}
-  <div class="error">❌ {{ error }}</div>
-  {% endif %}
+  <h2>{% if is_edit %}Éditer intervention: {{ intervention.nom_projet }}{% else %}Ajouter une intervention{% endif %}</h2>
 
   <form method="post">
     {% csrf_token %}
@@ -30,7 +26,7 @@
       <select id="id_region" name="id_region" required onchange="updateInterventionProvinces()">
         <option value="">-- Sélectionner --</option>
         {% for region in regions %}
-        <option value="{{ region.id_region }}">{{ region.nom_region }}</option>
+        <option value="{{ region.id_region }}" {% if form_data.id_region == region.id_region|stringformat:"s" %}selected{% endif %}>{{ region.nom_region }}</option>
         {% endfor %}
       </select>
     </div>
@@ -53,15 +49,12 @@
       <label for="id_patrimoine"><strong>Patrimoine *</strong></label>
       <select id="id_patrimoine" name="id_patrimoine" required>
         <option value="">-- Sélectionner --</option>
-        {% for p in patrimoines %}
-        <option value="{{ p.id_patrimoine }}">{{ p.nom_fr }}</option>
-        {% endfor %}
       </select>
     </div>
 
     <div class="form-group">
       <label for="nom_projet"><strong>Nom du projet *</strong></label>
-      <input type="text" id="nom_projet" name="nom_projet" required />
+      <input type="text" id="nom_projet" name="nom_projet" value="{{ form_data.nom_projet }}" required />
     </div>
 
     <div class="form-group">
@@ -69,7 +62,16 @@
       <select id="type_intervention" name="type_intervention" required>
         <option value="">-- Sélectionner --</option>
         {% for code, label in intervention_types %}
-        <option value="{{ code }}">{{ label }}</option>
+        <option value="{{ code }}" {% if form_data.type_intervention == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="statut"><strong>Statut *</strong></label>
+      <select id="statut" name="statut" required>
+        {% for code, label in intervention_statuts %}
+        <option value="{{ code }}" {% if form_data.statut == code or not form_data.statut and code == 'PLANIFIEE' %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
     </div>
@@ -77,32 +79,36 @@
     <div class="form-row">
       <div class="form-group">
         <label for="date_debut"><strong>Date début *</strong></label>
-        <input type="date" id="date_debut" name="date_debut" required />
+        <input type="date" id="date_debut" name="date_debut" value="{{ form_data.date_debut }}" required />
       </div>
       <div class="form-group">
         <label for="date_fin"><strong>Date fin</strong></label>
-        <input type="date" id="date_fin" name="date_fin" />
+        <input type="date" id="date_fin" name="date_fin" value="{{ form_data.date_fin }}" />
       </div>
     </div>
 
     <div class="form-group">
       <label for="prestataire"><strong>Prestataire</strong></label>
-      <input type="text" id="prestataire" name="prestataire" />
+      <input type="text" id="prestataire" name="prestataire" value="{{ form_data.prestataire }}" />
     </div>
 
     <div class="form-group">
       <label for="description"><strong>Description</strong></label>
-      <textarea id="description" name="description"></textarea>
+      <textarea id="description" name="description">{{ form_data.description }}</textarea>
     </div>
 
     <div style="display: flex; gap: 10px;">
-      <button type="submit" style="flex: 1;">Créer intervention</button>
+      <button type="submit" style="flex: 1;">{% if is_edit %}Mettre à jour{% else %}Créer intervention{% endif %}</button>
       <a href="{% url 'intervention-list' %}" class="btn btn-secondary" style="padding: 10px 16px; text-decoration: none; background: #6b7280; color: white; display: flex; align-items: center; justify-content: center; border-radius: 4px; flex: 1;">Annuler</a>
     </div>
   </form>
 </div>
 
 <script>
+  let initialProvince = "{{ form_data.id_province|default:''|escapejs }}";
+  let initialCommune = "{{ form_data.id_commune|default:''|escapejs }}";
+  let initialPatrimoine = "{{ form_data.id_patrimoine|default:''|escapejs }}";
+
   function updateInterventionProvinces() {
     const regionId = document.getElementById('id_region').value;
     const provinceSelect = document.getElementById('id_province');
@@ -125,8 +131,15 @@
           const opt = document.createElement('option');
           opt.value = p.id_province;
           opt.textContent = p.nom_province;
+          if (initialProvince && String(initialProvince) === String(p.id_province)) {
+            opt.selected = true;
+          }
           provinceSelect.appendChild(opt);
         });
+        if (initialProvince) {
+          updateInterventionCommunes();
+          initialProvince = "";
+        }
       })
       .catch(err => console.error('Error loading provinces:', err));
   }
@@ -151,8 +164,15 @@
           const opt = document.createElement('option');
           opt.value = c.id_commune;
           opt.textContent = c.nom_commune;
+          if (initialCommune && String(initialCommune) === String(c.id_commune)) {
+            opt.selected = true;
+          }
           communeSelect.appendChild(opt);
         });
+        if (initialCommune) {
+          updateInterventionPatrimoines();
+          initialCommune = "";
+        }
       })
       .catch(err => console.error('Error loading communes:', err));
   }
@@ -174,10 +194,18 @@
           const opt = document.createElement('option');
           opt.value = p.id_patrimoine;
           opt.textContent = p.nom_fr;
+          if (initialPatrimoine && String(initialPatrimoine) === String(p.id_patrimoine)) {
+            opt.selected = true;
+          }
           patrimoineSelect.appendChild(opt);
         });
+        initialPatrimoine = "";
       })
       .catch(err => console.error('Error loading patrimoines:', err));
+  }
+
+  if (document.getElementById('id_region').value) {
+    updateInterventionProvinces();
   }
 </script>
 {% endblock %}

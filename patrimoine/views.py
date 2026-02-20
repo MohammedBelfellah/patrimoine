@@ -15,7 +15,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .models import Commune, Document, Inspection, InspectionModificationRequest, Intervention, Patrimoine, Province, Region
+from .models import AuditLog, Commune, Document, Inspection, InspectionModificationRequest, Intervention, Patrimoine, Province, Region
 
 
 def _geometry_from_spatial_file(uploaded_file):
@@ -951,5 +951,50 @@ def audit_log(request):
     """View audit log (superadmin only)."""
     if not request.user.is_superuser:
         return redirect("dashboard")
-    return render(request, "core/audit_log.html")
+
+    logs = AuditLog.objects.select_related("actor").all().order_by("-created_at")
+
+    action_filter = request.GET.get("action", "").strip()
+    entity_filter = request.GET.get("entity", "").strip()
+    actor_filter = request.GET.get("actor", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+
+    if action_filter:
+        logs = logs.filter(action=action_filter)
+    if entity_filter:
+        logs = logs.filter(entity_type=entity_filter)
+    if actor_filter:
+        logs = logs.filter(actor_id=actor_filter)
+    if date_from:
+        logs = logs.filter(created_at__date__gte=date_from)
+    if date_to:
+        logs = logs.filter(created_at__date__lte=date_to)
+
+    action_choices = (
+        AuditLog.objects.values_list("action", flat=True)
+        .distinct()
+        .order_by("action")
+    )
+    entity_choices = (
+        AuditLog.objects.values_list("entity_type", flat=True)
+        .distinct()
+        .order_by("entity_type")
+    )
+    actor_choices = User.objects.filter(id__in=AuditLog.objects.values_list("actor_id", flat=True).distinct()).order_by("email")
+
+    context = {
+        "logs": logs[:300],
+        "action_choices": action_choices,
+        "entity_choices": entity_choices,
+        "actor_choices": actor_choices,
+        "filters": {
+            "action": action_filter,
+            "entity": entity_filter,
+            "actor": actor_filter,
+            "date_from": date_from,
+            "date_to": date_to,
+        },
+    }
+    return render(request, "core/audit_log.html", context)
 

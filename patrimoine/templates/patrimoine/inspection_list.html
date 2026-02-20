@@ -1,77 +1,92 @@
 {% extends "core/base.html" %}
 {% block title %}Inspections{% endblock %}
+{% block head_extra %}
+<style>
+  .page-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .page-title h2 { margin: 0; font-size: 2.2rem; font-weight: 700; color: #1f2937; }
+  .filter-wrap { background: #fff; border-radius: 12px; box-shadow: 0 4px 14px rgba(2,6,23,.08); overflow: hidden; margin-bottom: 14px; }
+  .filter-head { background: linear-gradient(90deg, #1f6bdd, #2570ea); color: #fff; font-size: 1.05rem; font-weight: 700; padding: 10px 16px; }
+  .filter-body { padding: 14px 16px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: #fff; }
+  thead th { background: #18202b; color: #fff; font-size: 1.03rem; font-weight: 700; border: none; }
+  th, td { padding: 12px; text-align: left; border-bottom: 1px solid #d8dee6; font-size: .98rem; }
+  tr:hover { background: #f6f8fb; }
+  .actions { text-align: center; white-space: nowrap; }
+  .results-count { color: #4b5563; margin: 8px 0 12px; font-size: .98rem; }
+  @media (max-width: 1200px) { .page-title h2 { font-size: 1.7rem; } }
+</style>
+{% endblock %}
 {% block content %}
 <div class="card">
-  <h2>📋 Inspections</h2>
-
-  {% if can_add %}
-  <div style="margin-bottom: 16px;">
-    <a href="{% url 'inspection-create' %}" class="btn btn-primary">+ Ajouter une inspection</a>
+  <div class="page-title">
+    <h2><i class="bi bi-clipboard-check"></i> Inspections</h2>
+    {% if can_add %}
+    <a href="{% url 'inspection-create' %}" class="btn btn-success btn-lg"><i class="bi bi-plus-circle"></i> Ajouter une inspection</a>
+    {% endif %}
   </div>
-  {% endif %}
+
+  <p class="results-count"><i class="bi bi-square-fill" style="font-size:.65rem;"></i> {{ inspections|length }} inspection(s)</p>
 
   {% if is_admin and pending_requests %}
-  <div style="background: #fef9c3; border: 2px solid #ca8a04; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-    <h3 style="margin-top: 0; color: #854d0e;">⚠️ Demandes de modification en attente ({{ pending_requests|length }})</h3>
-    <table style="width: 100%; border-collapse: collapse;">
+  <div class="filter-wrap">
+    <div class="filter-head"><i class="bi bi-exclamation-triangle"></i> Demandes de modification en attente ({{ pending_requests|length }})</div>
+    <div class="filter-body table-wrap">
+    <table>
       <thead>
         <tr style="background: #fef3c7;">
-          <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ca8a04;">Patrimoine</th>
-          <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ca8a04;">Inspecteur</th>
-          <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ca8a04;">Date demande</th>
-          <th style="padding: 8px; text-align: center; border-bottom: 1px solid #ca8a04;">Action</th>
+          <th>Patrimoine</th>
+          <th>Inspecteur</th>
+          <th>Date demande</th>
+          <th class="actions">Action</th>
         </tr>
       </thead>
       <tbody>
         {% for req in pending_requests %}
-        <tr style="border-bottom: 1px solid #fde68a;">
-          <td style="padding: 8px;">{{ req.id_inspection.id_patrimoine.nom_fr }}</td>
-          <td style="padding: 8px;">{{ req.requested_by.email }}</td>
-          <td style="padding: 8px;">{{ req.requested_at|date:"d/m/Y H:i" }}</td>
-          <td style="padding: 8px; text-align: center;">
-            <a href="{% url 'inspection-detail' req.id_inspection.id_inspection %}" class="btn btn-primary" style="padding: 4px 12px; font-size: 13px;">Examiner</a>
+        <tr>
+          <td>{{ req.id_inspection.id_patrimoine.nom_fr }}</td>
+          <td>{{ req.requested_by.email }}</td>
+          <td>{{ req.requested_at|date:"d/m/Y H:i" }}</td>
+          <td class="actions">
+            <a href="{% url 'inspection-detail' req.id_inspection.id_inspection %}" class="btn btn-primary btn-sm">Examiner</a>
           </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
   {% endif %}
 
   {% if inspections %}
-  <table style="width: 100%; border-collapse: collapse;">
+  <div class="table-wrap">
+  <table>
     <thead>
-      <tr style="background: #f0f0f0;">
-        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Patrimoine</th>
-        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Date</th>
-        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">État</th>
-        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Inspecteur</th>
-        <th style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">Action</th>
+      <tr>
+        <th>Patrimoine</th>
+        <th>Date</th>
+        <th>État</th>
+        <th>Inspecteur</th>
+        <th class="actions">Action</th>
       </tr>
     </thead>
     <tbody>
       {% for insp in inspections %}
-      <tr style="border-bottom: 1px solid #ddd;">
-        <td style="padding: 10px;">{{ insp.id_patrimoine.nom_fr }}</td>
-        <td style="padding: 10px;">{{ insp.date_inspection|date:"d/m/Y" }}</td>
-        <td style="padding: 10px;"><strong>{{ insp.get_etat_display }}</strong></td>
-        <td style="padding: 10px;">{{ insp.id_inspecteur.email }}</td>
-        <td style="padding: 10px; text-align: center;">
-          <a href="{% url 'inspection-detail' insp.id_inspection %}" class="btn btn-secondary" style="padding: 4px 12px; font-size: 13px;">Voir</a>
+      <tr>
+        <td>{{ insp.id_patrimoine.nom_fr }}</td>
+        <td>{{ insp.date_inspection|date:"d/m/Y" }}</td>
+        <td><strong>{{ insp.get_etat_display }}</strong></td>
+        <td>{{ insp.id_inspecteur.email }}</td>
+        <td class="actions">
+          <a href="{% url 'inspection-detail' insp.id_inspection %}" class="btn btn-outline-primary btn-sm">Voir</a>
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
   {% else %}
   <p class="muted">Aucune inspection enregistrée.</p>
   {% endif %}
 </div>
-
-<style>
-  .btn { display: inline-block; padding: 6px 12px; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; }
-  .btn-primary { background: #1d4ed8; color: white; }
-  .btn-secondary { background: #6b7280; color: white; }
-  .btn:hover { opacity: 0.9; }
-</style>
 {% endblock %}

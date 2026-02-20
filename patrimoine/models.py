@@ -216,3 +216,23 @@ class Document(models.Model):
     def __str__(self):
         return self.file_name
 
+
+class AuditLog(models.Model):
+    id_log = models.BigAutoField(primary_key=True, db_column="id_log")
+    actor = models.ForeignKey("auth.User", on_delete=models.PROTECT, db_column="actor_id")
+    action = models.CharField(max_length=50, db_column="action")
+    entity_type = models.CharField(max_length=50, db_column="entity_type")
+    entity_id = models.IntegerField(db_column="entity_id")
+    old_data = models.JSONField(null=True, blank=True, db_column="old_data")
+    new_data = models.JSONField(null=True, blank=True, db_column="new_data")
+    created_at = models.DateTimeField(db_column="created_at")
+
+    class Meta:
+        managed = False
+        db_table = "audit_log"
+        verbose_name = "Log d'audit"
+        verbose_name_plural = "Logs d'audit"
+
+    def __str__(self):
+        return f"{self.action} {self.entity_type}#{self.entity_id}"
+

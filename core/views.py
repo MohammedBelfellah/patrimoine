@@ -4,10 +4,11 @@ from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
 from django.contrib.auth.views import LoginView
+from django.db.models import Count
 from django.shortcuts import redirect, render
 
 from .forms import EmailAuthenticationForm
-from patrimoine.models import Patrimoine, Region
+from patrimoine.models import Inspection, Intervention, Patrimoine, Region
 
 
 class UserLoginView(LoginView):
@@ -50,7 +51,7 @@ def dashboard_router_view(request):
 def superadmin_view(request):
     if not request.user.is_superuser:
         return redirect("dashboard")
-    return render(request, "core/dashboard_superadmin.html")
+    return render(request, "core/dashboard_analytics.html", _dashboard_context(request.user))
 
 
 @login_required
@@ -59,7 +60,7 @@ def admin_view(request):
         return redirect("dashboard-superadmin")
     if not request.user.groups.filter(name="ADMIN").exists():
         return redirect("dashboard")
-    return render(request, "core/dashboard_admin.html")
+    return render(request, "core/dashboard_analytics.html", _dashboard_context(request.user))
 
 
 @login_required
@@ -70,7 +71,28 @@ def inspecteur_view(request):
         return redirect("dashboard-admin")
     if not request.user.groups.filter(name="INSPECTEUR").exists():
         return redirect("dashboard")
-    return render(request, "core/dashboard_inspecteur.html")
+    
+    # Statistics for inspecteur
+    my_inspections = Inspection.objects.filter(id_inspecteur=request.user)
+    my_inspections_count = my_inspections.count()
+    total_patrimoines = Patrimoine.objects.count()
+    
+    # Patrimoines inspected by this inspecteur
+    inspected_patrimoines = Patrimoine.objects.filter(
+        inspection__id_inspecteur=request.user
+    ).distinct().order_by('-inspection__date_inspection')[:10]
+    
+    # Recent inspections
+    recent_inspections = my_inspections.select_related('id_patrimoine').order_by('-date_inspection')[:5]
+    
+    context = {
+        'my_inspections_count': my_inspections_count,
+        'total_patrimoines': total_patrimoines,
+        'inspected_patrimoines': inspected_patrimoines,
+        'recent_inspections': recent_inspections,
+    }
+    
+    return render(request, "core/dashboard_inspecteur.html", context)
 
 
 @login_required
@@ -115,3 +137,62 @@ def public_map_view(request):
         "patrimoine_statuts": Patrimoine.PATRIMOINE_STATUTS,
     }
     return render(request, "core/public_map.html", context)
+
+
+def _dashboard_context(user):
+    total_patrimoines = Patrimoine.objects.count()
+    total_inspections = Inspection.objects.count()
+    total_interventions = Intervention.objects.count()
+
+    by_type = list(
+        Patrimoine.objects.values("type_patrimoine")
+        .annotate(total=Count("id_patrimoine"))
+        .order_by("type_patrimoine")
+    )
+    by_statut = list(
+        Patrimoine.objects.values("statut")
+        .annotate(total=Count("id_patrimoine"))
+        .order_by("statut")
+    )
+    by_region = list(
+        Patrimoine.objects.values("id_commune__id_province__id_region__nom_region")
+        .annotate(total=Count("id_patrimoine"))
+        .order_by("id_commune__id_province__id_region__nom_region")
+    )
+    inspection_state = list(
+        Inspection.objects.values("etat")
+        .annotate(total=Count("id_inspection"))
+        .order_by("etat")
+    )
+    intervention_status = list(
+        Intervention.objects.values("statut")
+        .annotate(total=Count("id_intervention"))
+        .order_by("statut")
+    )
+
+    centroids = []
+    for p in Patrimoine.objects.exclude(centroid_geom__isnull=True).only("id_patrimoine", "nom_fr", "type_patrimoine", "centroid_geom")[:1000]:
+        if not p.centroid_geom:
+            continue
+        geo = json.loads(p.centroid_geom.geojson)
+        centroids.append(
+            {
+                "id": p.id_patrimoine,
+                "nom": p.nom_fr,
+                "type": p.type_patrimoine,
+                "coords": geo.get("coordinates", []),
+            }
+        )
+
+    return {
+        "is_superadmin": user.is_superuser,
+        "total_patrimoines": total_patrimoines,
+        "total_inspections": total_inspections,
+        "total_interventions": total_interventions,
+        "by_type_json": json.dumps(by_type),
+        "by_statut_json": json.dumps(by_statut),
+        "by_region_json": json.dumps(by_region),
+        "inspection_state_json": json.dumps(inspection_state),
+        "intervention_status_json": json.dumps(intervention_status),
+        "centroids_json": json.dumps(centroids),
+    }

@@ -2,36 +2,88 @@
 {% block title %}Inspecteur{% endblock %}
 {% block head_extra %}
 <style>
-  .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
-  .dashboard-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-decoration: none; }
-  .dashboard-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,.2); }
-  .dashboard-card h3 { margin: 0 0 12px 0; font-size: 18px; }
-  .dashboard-card p { margin: 0; font-size: 14px; opacity: 0.9; }
-  .dashboard-card.patrimoine { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-  .dashboard-card.inspection { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-  .dashboard-card.map { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 20px 0; }
+    .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; text-align: center; }
+    .stat-card.blue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .stat-card.green { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    .stat-number { font-size: 2.5rem; font-weight: 700; margin: 10px 0; }
+    .stat-label { font-size: 0.9rem; opacity: 0.95; }
+    .section-title { color: #1f2937; font-size: 1.3rem; font-weight: 700; margin: 30px 0 15px; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb; }
+    .patrimoine-item { padding: 12px; background: #f9fafb; border-left: 3px solid #4facfe; margin-bottom: 10px; border-radius: 6px; }
+    .patrimoine-item:hover { background: #f3f4f6; }
+    .inspection-item { padding: 12px; background: #f0fdf4; border-left: 3px solid #43e97b; margin-bottom: 10px; border-radius: 6px; }
+    .inspection-item:hover { background: #dcfce7; }
 </style>
 {% endblock %}
 {% block content %}
 <div class="card">
-  <h2>🔍 Inspecteur - Suivi Terrain</h2>
-  <p class="muted">Consulter patrimoines et gérer vos inspections.</p>
+    <h2>🔍 Inspecteur - Suivi Terrain</h2>
+    <p class="muted">Bienvenue {{ user.get_full_name|default:user.username }}. Voici un aperçu de votre activité d'inspection.</p>
 
-  <div class="dashboard-grid">
-    <a href="{% url 'patrimoine-list' %}" class="dashboard-card patrimoine">
-      <h3>📍 Patrimoines</h3>
-      <p>Consulter les patrimoines (lecture seule)</p>
-    </a>
+    <div class="stats-grid">
+        <div class="stat-card blue">
+            <div class="stat-label">Mes Inspections</div>
+            <div class="stat-number">{{ my_inspections_count }}</div>
+            <div class="stat-label">Total effectuées</div>
+        </div>
+        <div class="stat-card green">
+            <div class="stat-label">Patrimoines Inspectés</div>
+            <div class="stat-number">{{ inspected_patrimoines|length }}</div>
+            <div class="stat-label">Sites différents</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Base de Données</div>
+            <div class="stat-number">{{ total_patrimoines }}</div>
+            <div class="stat-label">Patrimoines enregistrés</div>
+        </div>
+    </div>
 
-    <a href="{% url 'inspection-list' %}" class="dashboard-card inspection">
-      <h3>🔍 Mes Inspections</h3>
-      <p>Ajouter et consulter mes inspections</p>
-    </a>
+    {% if recent_inspections %}
+    <h3 class="section-title">📋 Mes Inspections Récentes</h3>
+    {% for inspection in recent_inspections %}
+    <div class="inspection-item">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <strong style="color: #1f2937;">{{ inspection.id_patrimoine.nom_fr }}</strong>
+                <div style="color: #6b7280; font-size: 0.9rem; margin-top: 4px;">
+                    État: <strong>{{ inspection.get_etat_display }}</strong> · 
+                    {{ inspection.date_inspection|date:"d/m/Y" }}
+                </div>
+            </div>
+            <a href="{% url 'inspection-detail' inspection.id_inspection %}" class="btn btn-sm btn-outline-primary">Voir</a>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
 
-    <a href="{% url 'patrimoine-map' %}" class="dashboard-card map">
-      <h3>🗺️ Carte</h3>
-      <p>Vue cartographique des patrimoines</p>
-    </a>
-  </div>
+    {% if inspected_patrimoines %}
+    <h3 class="section-title">🏛️ Patrimoines que j'ai Inspectés</h3>
+    {% for patrimoine in inspected_patrimoines %}
+    <div class="patrimoine-item">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <strong style="color: #1f2937;">{{ patrimoine.nom_fr }}</strong>
+                <div style="color: #6b7280; font-size: 0.9rem; margin-top: 4px;">
+                    {{ patrimoine.get_type_patrimoine_display }} · {{ patrimoine.full_location }}
+                </div>
+            </div>
+            <a href="{% url 'patrimoine-detail' patrimoine.id_patrimoine %}" class="btn btn-sm btn-outline-primary">Détails</a>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div style="margin-top: 30px; padding: 20px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
+        <p style="margin: 0; color: #92400e;">Vous n'avez pas encore effectué d'inspections. Commencez par consulter la liste des patrimoines et créez votre première inspection.</p>
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-radius: 12px; border-left: 4px solid #667eea;">
+        <h3 style="margin-top: 0; color: #1f2937;">📋 Actions Rapides</h3>
+        <ul style="line-height: 1.8; color: #4b5563;">
+            <li><strong>Patrimoines</strong> : Consultez la liste complète des patrimoines culturels</li>
+            <li><strong>Inspections</strong> : Créez et gérez vos rapports d'inspection terrain</li>
+            <li><strong>Carte</strong> : Visualisez la répartition géographique des sites</li>
+        </ul>
+    </div>
 </div>
 {% endblock %}

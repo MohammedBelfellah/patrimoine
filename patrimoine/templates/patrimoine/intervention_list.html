@@ -1,45 +1,66 @@
 {% extends "core/base.html" %}
 {% block title %}Interventions{% endblock %}
+{% block head_extra %}
+<style>
+  .page-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .page-title h2 { margin: 0; font-size: 2.2rem; font-weight: 700; color: #1f2937; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: #fff; }
+  thead th { background: #18202b; color: #fff; font-size: 1.03rem; font-weight: 700; border: none; }
+  th, td { padding: 12px; text-align: left; border-bottom: 1px solid #d8dee6; font-size: .98rem; }
+  tr:hover { background: #f6f8fb; }
+  .actions { text-align: center; white-space: nowrap; }
+  .btn-action { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 6px; margin-right: 6px; border: 1px solid; text-decoration: none; }
+  .btn-view { color: #2563eb; border-color: #93c5fd; background: #eff6ff; }
+  .btn-edit { color: #d97706; border-color: #fcd34d; background: #fffbeb; }
+  .btn-del { color: #dc2626; border-color: #fca5a5; background: #fef2f2; }
+  .results-count { color: #4b5563; margin: 8px 0 12px; font-size: .98rem; }
+  @media (max-width: 1200px) { .page-title h2 { font-size: 1.7rem; } }
+</style>
+{% endblock %}
 {% block content %}
 <div class="card">
-  <h2>🔧 Interventions</h2>
-
-  <div style="margin-bottom: 16px;">
-    <a href="{% url 'intervention-create' %}" class="btn btn-primary">+ Ajouter une intervention</a>
+  <div class="page-title">
+    <h2><i class="bi bi-tools"></i> Interventions</h2>
+    <a href="{% url 'intervention-create' %}" class="btn btn-success btn-lg"><i class="bi bi-plus-circle"></i> Ajouter une intervention</a>
   </div>
 
+  <p class="results-count"><i class="bi bi-square-fill" style="font-size:.65rem;"></i> {{ interventions|length }} intervention(s)</p>
+
   {% if interventions %}
-  <table style="width: 100%; border-collapse: collapse;">
+  <div class="table-wrap">
+  <table>
     <thead>
-      <tr style="background: #f0f0f0;">
-        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Projet</th>
-        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Patrimoine</th>
-        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Type</th>
-        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Statut</th>
-        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Début</th>
-        <th style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">Actions</th>
+      <tr>
+        <th>Projet</th>
+        <th>Patrimoine</th>
+        <th>Type</th>
+        <th>Statut</th>
+        <th>Début</th>
+        <th class="actions">Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for inter in interventions %}
-      <tr style="border-bottom: 1px solid #ddd;">
-        <td style="padding: 10px;">{{ inter.nom_projet }}</td>
-        <td style="padding: 10px;">{{ inter.id_patrimoine.nom_fr }}</td>
-        <td style="padding: 10px;">{{ inter.get_type_intervention_display }}</td>
-        <td style="padding: 10px;"><strong>{{ inter.get_statut_display }}</strong></td>
-        <td style="padding: 10px;">{{ inter.date_debut|date:"d/m/Y" }}</td>
-        <td style="padding: 10px; text-align: center; white-space: nowrap;">
-          <a href="{% url 'intervention-detail' inter.id_intervention %}" class="btn btn-secondary" style="padding: 4px 10px;">Voir</a>
-          <a href="{% url 'intervention-edit' inter.id_intervention %}" class="btn btn-primary" style="padding: 4px 10px;">Éditer</a>
+      <tr>
+        <td>{{ inter.nom_projet }}</td>
+        <td>{{ inter.id_patrimoine.nom_fr }}</td>
+        <td>{{ inter.get_type_intervention_display }}</td>
+        <td><strong>{{ inter.get_statut_display }}</strong></td>
+        <td>{{ inter.date_debut|date:"d/m/Y" }}</td>
+        <td class="actions">
+          <a href="{% url 'intervention-detail' inter.id_intervention %}" class="btn-action btn-view" title="Voir"><i class="bi bi-eye"></i></a>
+          <a href="{% url 'intervention-edit' inter.id_intervention %}" class="btn-action btn-edit" title="Éditer"><i class="bi bi-pencil"></i></a>
           <form method="post" action="{% url 'intervention-delete' inter.id_intervention %}" style="display: inline;" onsubmit="return confirm('Supprimer cette intervention ?');">
             {% csrf_token %}
-            <button type="submit" class="btn btn-danger" style="padding: 4px 10px;">Supprimer</button>
+            <button type="submit" class="btn-action btn-del" title="Supprimer"><i class="bi bi-trash"></i></button>
           </form>
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
   {% else %}
   <p class="muted">Aucune intervention enregistrée.</p>
   {% endif %}

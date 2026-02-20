@@ -1,17 +1,133 @@
 {% extends "core/base.html" %}
 {% block title %}Journal d'audit{% endblock %}
+{% block head_extra %}
+<style>
+  .page-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .page-title h2 { margin: 0; font-size: 2.2rem; font-weight: 700; color: #1f2937; }
+  .filter-wrap { background: #fff; border-radius: 12px; box-shadow: 0 4px 14px rgba(2,6,23,.08); overflow: hidden; margin-bottom: 14px; }
+  .filter-head { background: linear-gradient(90deg, #1f6bdd, #2570ea); color: #fff; font-size: 1.05rem; font-weight: 700; padding: 10px 16px; }
+  .filter-body { padding: 14px 16px; }
+  .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: #fff; }
+  thead th { background: #18202b; color: #fff; font-size: 1.03rem; font-weight: 700; border: none; }
+  th, td { padding: 12px; text-align: left; border-bottom: 1px solid #d8dee6; font-size: .98rem; vertical-align: top; }
+  tr:hover { background: #f6f8fb; }
+  .results-count { color: #4b5563; margin: 8px 0 12px; font-size: .98rem; }
+  @media (max-width: 1200px) { .page-title h2 { font-size: 1.7rem; } }
+</style>
+{% endblock %}
 {% block content %}
 <div class="card">
-  <h2>📊 Journal d'audit</h2>
+  <div class="page-title">
+    <h2><i class="bi bi-shield-check"></i> Journal d'audit</h2>
+  </div>
   <p class="muted">Historique des opérations (créations, modifications, suppressions).</p>
 
-  <div style="margin-top: 16px; padding: 12px; background: #f3f4f6; border-radius: 4px; border-left: 4px solid #3b82f6;">
-    <p><strong>Status:</strong> Module en développement. Affichage détaillé des logs PostgreSQL bientôt.</p>
-    <ul style="margin-top: 8px; margin-left: 20px;">
-      <li>Suivi des CREATE/UPDATE/DELETE par utilisateur</li>
-      <li>Timestamps avec avant/après données (JSON)</li>
-      <li>Filtrage par date et type d'action</li>
-    </ul>
+  <div class="filter-wrap">
+    <div class="filter-head"><i class="bi bi-funnel"></i> Recherche et Filtres</div>
+    <div class="filter-body">
+  <form method="get" class="filter-grid">
+    <div>
+      <label for="action">Action</label>
+      <select id="action" name="action">
+        <option value="">Toutes</option>
+        {% for action in action_choices %}
+        <option value="{{ action }}" {% if filters.action == action %}selected{% endif %}>{{ action }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label for="entity">Entité</label>
+      <select id="entity" name="entity">
+        <option value="">Toutes</option>
+        {% for entity in entity_choices %}
+        <option value="{{ entity }}" {% if filters.entity == entity %}selected{% endif %}>{{ entity }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label for="actor">Utilisateur</label>
+      <select id="actor" name="actor">
+        <option value="">Tous</option>
+        {% for actor in actor_choices %}
+        <option value="{{ actor.id }}" {% if filters.actor == actor.id|stringformat:"s" %}selected{% endif %}>{{ actor.email }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label for="date_from">Du</label>
+      <input id="date_from" name="date_from" type="date" value="{{ filters.date_from }}" />
+    </div>
+
+    <div>
+      <label for="date_to">Au</label>
+      <input id="date_to" name="date_to" type="date" value="{{ filters.date_to }}" />
+    </div>
+
+    <div style="display: flex; align-items: end; gap: 8px;">
+      <button type="submit" class="btn btn-primary" style="width: 100%;">Filtrer</button>
+      <a href="{% url 'audit-log' %}" class="btn btn-outline-secondary" style="width: 100%; text-align: center;">Reset</a>
+    </div>
+  </form>
+    </div>
   </div>
+
+  {% if logs %}
+  <p class="results-count"><i class="bi bi-square-fill" style="font-size:.65rem;"></i> {{ logs|length }} log(s)</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Utilisateur</th>
+          <th>Action</th>
+          <th>Entité</th>
+          <th>ID entité</th>
+          <th>Avant</th>
+          <th>Après</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>{{ log.created_at|date:"d/m/Y H:i:s" }}</td>
+          <td>{{ log.actor.email }}</td>
+          <td><strong>{{ log.action }}</strong></td>
+          <td>{{ log.entity_type }}</td>
+          <td>#{{ log.entity_id }}</td>
+          <td>
+            {% if log.old_data %}
+            <details>
+              <summary>Voir JSON</summary>
+              <pre style="white-space: pre-wrap; max-width: 320px; margin: 8px 0 0;">{{ log.old_data|pprint }}</pre>
+            </details>
+            {% else %}
+            <span class="muted">-</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if log.new_data %}
+            <details>
+              <summary>Voir JSON</summary>
+              <pre style="white-space: pre-wrap; max-width: 320px; margin: 8px 0 0;">{{ log.new_data|pprint }}</pre>
+            </details>
+            {% else %}
+            <span class="muted">-</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="margin-top: 16px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid rgba(148,163,184,.35);">
+    <span class="muted">Aucun log d'audit trouvé pour les filtres sélectionnés.</span>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

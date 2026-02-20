@@ -12,9 +12,10 @@
     display: grid;
     grid-template-columns: minmax(240px, 300px) 1fr;
     gap: 12px;
+    max-height: calc(100vh - 80px);
   }
   #map {
-    height: 90vh;
+    height: 75vh;
     border-radius: 16px;
     box-shadow: var(--shadow);
     border: 1px solid rgba(148, 163, 184, 0.35);
@@ -23,6 +24,8 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
+    max-height: 75vh;
+    overflow-y: auto;
   }
   .tool-grid {
     display: grid;
@@ -54,7 +57,7 @@
   }
   @media (max-width: 992px) {
     .public-shell { grid-template-columns: 1fr; }
-    #map { height: 75vh; }
+    #map { height: 65vh; }
   }
 </style>
 {% endblock %}

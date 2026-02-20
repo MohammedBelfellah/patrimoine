@@ -1,0 +1,104 @@
+{% extends "core/base.html" %}
+{% block title %}Tableau de Bord{% endblock %}
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .kpi { background: #fff; border: 1px solid rgba(148,163,184,.35); border-radius: 12px; padding: 14px; }
+  .kpi .v { font-size: 2rem; font-weight: 700; color: #0f172a; }
+  .panel-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; margin-top: 12px; }
+  .panel { background:#fff; border:1px solid rgba(148,163,184,.35); border-radius:12px; padding:12px; }
+  .panel h5 { margin: 0 0 8px 0; }
+  .mini-map { height: 320px; border-radius: 10px; border:1px solid rgba(148,163,184,.35); }
+  @media (max-width: 1100px) { .panel-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>📈 Tableau de Bord</h2>
+  <p class="muted">Statistiques, graphiques et mini carte interactive.</p>
+
+  <div class="kpi-grid mt-3">
+    <div class="kpi">
+      <div class="muted">Nombre total patrimoines</div>
+      <div class="v">{{ total_patrimoines }}</div>
+    </div>
+    <div class="kpi">
+      <div class="muted">Nombre inspections</div>
+      <div class="v">{{ total_inspections }}</div>
+    </div>
+    <div class="kpi">
+      <div class="muted">Nombre interventions</div>
+      <div class="v">{{ total_interventions }}</div>
+    </div>
+    <div class="kpi">
+      <div class="muted">Accès</div>
+      <div class="v" style="font-size:1.2rem;">{% if is_superadmin %}Superadmin{% else %}Admin{% endif %}</div>
+    </div>
+  </div>
+
+  <div class="panel-grid">
+    <div class="panel"><h5>Répartition par type</h5><canvas id="chartType"></canvas></div>
+    <div class="panel"><h5>Répartition par statut</h5><canvas id="chartStatut"></canvas></div>
+    <div class="panel"><h5>Patrimoines par région</h5><canvas id="chartRegion"></canvas></div>
+    <div class="panel"><h5>État des inspections</h5><canvas id="chartInspection"></canvas></div>
+    <div class="panel"><h5>Statut interventions</h5><canvas id="chartIntervention"></canvas></div>
+    <div class="panel">
+      <h5>Mini carte interactive (centroïdes)</h5>
+      <div id="miniMap" class="mini-map"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+  const byType = {{ by_type_json|safe }};
+  const byStatut = {{ by_statut_json|safe }};
+  const byRegion = {{ by_region_json|safe }};
+  const inspectionState = {{ inspection_state_json|safe }};
+  const interventionStatus = {{ intervention_status_json|safe }};
+  const centroids = {{ centroids_json|safe }};
+
+  const chartColors = ['#3b82f6','#10b981','#f97316','#8b5cf6','#ef4444','#06b6d4','#84cc16','#f59e0b'];
+
+  function makeBarChart(id, labels, values) {
+    new Chart(document.getElementById(id), {
+      type: 'bar',
+      data: { labels, datasets: [{ data: values, backgroundColor: chartColors }] },
+      options: { plugins: { legend: { display: false } }, responsive: true }
+    });
+  }
+
+  function makeDoughnutChart(id, labels, values) {
+    new Chart(document.getElementById(id), {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: values, backgroundColor: chartColors }] },
+      options: { responsive: true }
+    });
+  }
+
+  makeDoughnutChart('chartType', byType.map(x => x.type_patrimoine), byType.map(x => x.total));
+  makeDoughnutChart('chartStatut', byStatut.map(x => x.statut), byStatut.map(x => x.total));
+  makeBarChart('chartRegion', byRegion.map(x => x.id_commune__id_province__id_region__nom_region), byRegion.map(x => x.total));
+  makeBarChart('chartInspection', inspectionState.map(x => x.etat), inspectionState.map(x => x.total));
+  makeBarChart('chartIntervention', interventionStatus.map(x => x.statut), interventionStatus.map(x => x.total));
+
+  const map = L.map('miniMap').setView([31.7917, -7.0926], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  const typeColor = { MONDIAL: '#f97316', NATUREL: '#10b981', HISTORIQUE: '#3b82f6', AUTRE: '#64748b' };
+  centroids.forEach(c => {
+    if (!c.coords || c.coords.length < 2) return;
+    L.circleMarker([c.coords[1], c.coords[0]], {
+      radius: 5,
+      color: typeColor[c.type] || '#64748b',
+      fillOpacity: 0.9,
+      weight: 1,
+    }).addTo(map).bindPopup(`<strong>${c.nom}</strong><br>${c.type}`);
+  });
+</script>
+{% endblock %}

@@ -1,54 +1,20 @@
 {% extends "core/base.html" %}
 {% block title %}Superadmin{% endblock %}
-{% block head_extra %}
-<style>
-  .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
-  .dashboard-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-decoration: none; }
-  .dashboard-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,.2); }
-  .dashboard-card h3 { margin: 0 0 12px 0; font-size: 18px; }
-  .dashboard-card p { margin: 0; font-size: 14px; opacity: 0.9; }
-  .dashboard-card.patrimoine { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-  .dashboard-card.inspection { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-  .dashboard-card.intervention { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
-  .dashboard-card.document { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-  .dashboard-card.user { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
-</style>
-{% endblock %}
 {% block content %}
 <div class="card">
   <h2>🔧 Superadmin - Gestion Complète</h2>
-  <p class="muted">Accès administrateur complet système.</p>
-
-  <div class="dashboard-grid">
-    <a href="{% url 'patrimoine-list' %}" class="dashboard-card patrimoine">
-      <h3>📍 Patrimoines</h3>
-      <p>Gérer tous les patrimoines (créer, éditer, supprimer)</p>
-    </a>
-
-    <a href="{% url 'inspection-list' %}" class="dashboard-card inspection">
-      <h3>🔍 Inspections</h3>
-      <p>Gérer les inspections et approver les demandes</p>
-    </a>
-
-    <a href="{% url 'intervention-list' %}" class="dashboard-card intervention">
-      <h3>🛠️ Interventions</h3>
-      <p>Gérer les projets de restauration</p>
-    </a>
-
-    <a href="{% url 'document-list' %}" class="dashboard-card document">
-      <h3>📄 Documents</h3>
-      <p>Gérer les pièces jointes et uploads</p>
-    </a>
-
-    <a href="{% url 'user-management' %}" class="dashboard-card user">
-      <h3>👥 Utilisateurs</h3>
-      <p>Gérer les rôles et permissions</p>
-    </a>
-
-    <a href="{% url 'audit-log' %}" class="dashboard-card" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
-      <h3>📊 Audit</h3>
-      <p>Consulter le journal complet des actions</p>
-    </a>
+  <p class="muted">Bienvenue sur votre espace d'administration système. Utilisez le menu de navigation à gauche pour accéder à toutes les fonctionnalités.</p>
+  
+  <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-radius: 12px; border-left: 4px solid #667eea;">
+    <h3 style="margin-top: 0; color: #1f2937;">🔐 Accès complet administrateur</h3>
+    <ul style="line-height: 1.8; color: #4b5563;">
+      <li><strong>Patrimoines</strong> : Gestion complète avec pouvoir de création, édition et suppression</li>
+      <li><strong>Inspections</strong> : Supervision et validation des rapports d'inspection</li>
+      <li><strong>Interventions</strong> : Gestion des projets de restauration et conservation</li>
+      <li><strong>Documents</strong> : Administration des fichiers et pièces jointes</li>
+      <li><strong>Utilisateurs</strong> : Configuration des rôles et permissions système</li>
+      <li><strong>Journal d'audit</strong> : Suivi complet de toutes les opérations effectuées</li>
+    </ul>
   </div>
 </div>
 {% endblock %}

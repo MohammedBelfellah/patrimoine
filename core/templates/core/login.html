@@ -1,0 +1,17 @@
+{% extends "core/base.html" %}
+{% block title %}Connexion{% endblock %}
+{% block content %}
+<div class="card" style="max-width:450px;">
+  <h2>Connexion</h2>
+  <p class="muted">Accès admin / superadmin / inspecteur (email + mot de passe).</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <label>Email</label>
+    {{ form.username }}
+    <label>Mot de passe</label>
+    {{ form.password }}
+    <button type="submit">Se connecter</button>
+  </form>
+</div>
+{% endblock %}

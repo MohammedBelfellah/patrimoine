@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+from datetime import date, datetime
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
@@ -73,6 +74,32 @@ def _can_edit(user):
 def _can_view(user):
     """Check if user can view patrimoine (all authenticated users)."""
     return user.is_authenticated
+
+
+def _normalize_audit_data(data):
+    if not data:
+        return None
+    normalized = {}
+    for key, value in data.items():
+        if isinstance(value, (datetime, date)):
+            normalized[key] = value.isoformat()
+        elif isinstance(value, Decimal):
+            normalized[key] = float(value)
+        else:
+            normalized[key] = value
+    return normalized
+
+
+def _log_audit(actor, action, entity_type, entity_id, old_data=None, new_data=None):
+    AuditLog.objects.create(
+        actor=actor,
+        action=action,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        old_data=_normalize_audit_data(old_data),
+        new_data=_normalize_audit_data(new_data),
+        created_at=timezone.now(),
+    )
 
 
 @login_required
@@ -215,7 +242,7 @@ def patrimoine_create(request):
                 file_size_mb = Decimal(uploaded_file.size) / Decimal(1024 * 1024)
                 
                 # Create Document record
-                Document.objects.create(
+                document = Document.objects.create(
                     type_document="IMAGE",
                     file_name=uploaded_file.name,
                     file_path=saved_path,
@@ -223,6 +250,33 @@ def patrimoine_create(request):
                     uploaded_by=request.user,
                     id_patrimoine_id=patrimoine_id,
                 )
+                _log_audit(
+                    request.user,
+                    "CREATE",
+                    "DOCUMENT",
+                    document.id_document,
+                    new_data={
+                        "type_document": document.type_document,
+                        "file_name": document.file_name,
+                        "file_size_mb": document.file_size_mb,
+                        "id_patrimoine": document.id_patrimoine_id,
+                    },
+                )
+
+            _log_audit(
+                request.user,
+                "CREATE",
+                "PATRIMOINE",
+                patrimoine_id,
+                new_data={
+                    "nom_fr": nom_fr,
+                    "nom_ar": nom_ar or None,
+                    "type_patrimoine": type_patrimoine,
+                    "statut": statut,
+                    "reference_administrative": reference_administrative or None,
+                    "id_commune": id_commune,
+                },
+            )
 
             messages.success(request, "Patrimoine créé avec succès")
             return redirect("patrimoine-detail", id_patrimoine=patrimoine_id)
@@ -258,6 +312,15 @@ def patrimoine_edit(request, id_patrimoine):
 
     if request.method == "POST":
         try:
+            old_data = {
+                "nom_fr": patrimoine.nom_fr,
+                "nom_ar": patrimoine.nom_ar,
+                "description": patrimoine.description,
+                "type_patrimoine": patrimoine.type_patrimoine,
+                "statut": patrimoine.statut,
+                "reference_administrative": patrimoine.reference_administrative,
+                "id_commune": patrimoine.id_commune.id_commune,
+            }
             nom_fr = request.POST.get("nom_fr", patrimoine.nom_fr).strip()
             nom_ar = request.POST.get("nom_ar", patrimoine.nom_ar or "").strip()
             description = request.POST.get("description", patrimoine.description or "").strip()
@@ -343,7 +406,7 @@ def patrimoine_edit(request, id_patrimoine):
                 file_size_mb = Decimal(uploaded_file.size) / Decimal(1024 * 1024)
                 
                 # Create Document record
-                Document.objects.create(
+                document = Document.objects.create(
                     type_document="IMAGE",
                     file_name=uploaded_file.name,
                     file_path=saved_path,
@@ -351,6 +414,35 @@ def patrimoine_edit(request, id_patrimoine):
                     uploaded_by=request.user,
                     id_patrimoine=patrimoine,
                 )
+                _log_audit(
+                    request.user,
+                    "CREATE",
+                    "DOCUMENT",
+                    document.id_document,
+                    new_data={
+                        "type_document": document.type_document,
+                        "file_name": document.file_name,
+                        "file_size_mb": document.file_size_mb,
+                        "id_patrimoine": patrimoine.id_patrimoine,
+                    },
+                )
+
+            _log_audit(
+                request.user,
+                "UPDATE",
+                "PATRIMOINE",
+                patrimoine.id_patrimoine,
+                old_data=old_data,
+                new_data={
+                    "nom_fr": nom_fr,
+                    "nom_ar": nom_ar or None,
+                    "description": description or None,
+                    "type_patrimoine": type_patrimoine,
+                    "statut": statut,
+                    "reference_administrative": reference_administrative or None,
+                    "id_commune": id_commune or patrimoine.id_commune.id_commune,
+                },
+            )
 
             messages.success(request, "Patrimoine mis à jour avec succès")
             return redirect("patrimoine-detail", id_patrimoine=patrimoine.id_patrimoine)
@@ -391,7 +483,17 @@ def patrimoine_delete(request, id_patrimoine):
         return redirect("patrimoine-list")
 
     patrimoine = get_object_or_404(Patrimoine, id_patrimoine=id_patrimoine)
+    old_data = {
+        "nom_fr": patrimoine.nom_fr,
+        "nom_ar": patrimoine.nom_ar,
+        "description": patrimoine.description,
+        "type_patrimoine": patrimoine.type_patrimoine,
+        "statut": patrimoine.statut,
+        "reference_administrative": patrimoine.reference_administrative,
+        "id_commune": patrimoine.id_commune.id_commune,
+    }
     patrimoine.delete()
+    _log_audit(request.user, "DELETE", "PATRIMOINE", id_patrimoine, old_data=old_data)
     return redirect("patrimoine-list")
 
 
@@ -552,12 +654,24 @@ def inspection_create(request):
             observations = request.POST.get("observations", "").strip()
 
             patrimoine = Patrimoine.objects.get(id_patrimoine=id_patrimoine)
-            Inspection.objects.create(
+            inspection = Inspection.objects.create(
                 id_patrimoine=patrimoine,
                 id_inspecteur=request.user,
                 date_inspection=date_inspection,
                 etat=etat,
                 observations=observations,
+            )
+            _log_audit(
+                request.user,
+                "CREATE",
+                "INSPECTION",
+                inspection.id_inspection,
+                new_data={
+                    "id_patrimoine": patrimoine.id_patrimoine,
+                    "date_inspection": inspection.date_inspection,
+                    "etat": inspection.etat,
+                    "observations": inspection.observations,
+                },
             )
             return redirect("inspection-list")
         except Exception as e:
@@ -632,6 +746,11 @@ def inspection_request_approve(request, id_request):
     try:
         # Apply proposed changes to inspection using raw SQL to avoid auto-updated_at trigger issues
         inspection = mod_request.id_inspection
+        old_data = {
+            "date_inspection": inspection.date_inspection,
+            "etat": inspection.etat,
+            "observations": inspection.observations,
+        }
         proposed = mod_request.proposed_data
         
         with connection.cursor() as cursor:
@@ -648,6 +767,29 @@ def inspection_request_approve(request, id_request):
         mod_request.reviewed_at = timezone.now()
         mod_request.admin_note = request.POST.get("admin_note", "").strip()
         mod_request.save()
+
+        _log_audit(
+            request.user,
+            "APPROVE",
+            "INSPECTION_REQUEST",
+            mod_request.id_request,
+            new_data={
+                "status": mod_request.status,
+                "admin_note": mod_request.admin_note,
+            },
+        )
+        _log_audit(
+            request.user,
+            "UPDATE",
+            "INSPECTION",
+            inspection.id_inspection,
+            old_data=old_data,
+            new_data={
+                "date_inspection": proposed.get("date_inspection"),
+                "etat": proposed.get("etat"),
+                "observations": proposed.get("observations"),
+            },
+        )
         
         return redirect("inspection-detail", id_inspection=inspection.id_inspection)
     except Exception as e:
@@ -671,6 +813,17 @@ def inspection_request_reject(request, id_request):
     mod_request.reviewed_at = timezone.now()
     mod_request.admin_note = request.POST.get("admin_note", "").strip()
     mod_request.save()
+
+    _log_audit(
+        request.user,
+        "REJECT",
+        "INSPECTION_REQUEST",
+        mod_request.id_request,
+        new_data={
+            "status": mod_request.status,
+            "admin_note": mod_request.admin_note,
+        },
+    )
     
     return redirect("inspection-detail", id_inspection=mod_request.id_inspection.id_inspection)
 
@@ -762,7 +915,7 @@ def intervention_create(request):
                 raise ValueError("Champs obligatoires manquants")
 
             patrimoine = Patrimoine.objects.get(id_patrimoine=id_patrimoine)
-            Intervention.objects.create(
+            intervention = Intervention.objects.create(
                 id_patrimoine=patrimoine,
                 nom_projet=nom_projet,
                 type_intervention=type_intervention,
@@ -772,6 +925,21 @@ def intervention_create(request):
                 description=description,
                 statut=statut,
                 created_by=request.user,
+            )
+            _log_audit(
+                request.user,
+                "CREATE",
+                "INTERVENTION",
+                intervention.id_intervention,
+                new_data={
+                    "id_patrimoine": patrimoine.id_patrimoine,
+                    "nom_projet": intervention.nom_projet,
+                    "type_intervention": intervention.type_intervention,
+                    "statut": intervention.statut,
+                    "date_debut": intervention.date_debut,
+                    "date_fin": intervention.date_fin,
+                    "prestataire": intervention.prestataire,
+                },
             )
             messages.success(request, "Intervention créée avec succès")
             return redirect("intervention-list")
@@ -808,6 +976,16 @@ def intervention_edit(request, id_intervention):
     intervention = get_object_or_404(Intervention, id_intervention=id_intervention)
 
     if request.method == "POST":
+        old_data = {
+            "id_patrimoine": intervention.id_patrimoine.id_patrimoine,
+            "nom_projet": intervention.nom_projet,
+            "type_intervention": intervention.type_intervention,
+            "statut": intervention.statut,
+            "date_debut": intervention.date_debut,
+            "date_fin": intervention.date_fin,
+            "prestataire": intervention.prestataire,
+            "description": intervention.description,
+        }
         form_data = {
             "id_region": request.POST.get("id_region", "").strip(),
             "id_province": request.POST.get("id_province", "").strip(),
@@ -837,6 +1015,24 @@ def intervention_edit(request, id_intervention):
             intervention.prestataire = form_data["prestataire"]
             intervention.description = form_data["description"]
             intervention.save()
+
+            _log_audit(
+                request.user,
+                "UPDATE",
+                "INTERVENTION",
+                intervention.id_intervention,
+                old_data=old_data,
+                new_data={
+                    "id_patrimoine": intervention.id_patrimoine.id_patrimoine,
+                    "nom_projet": intervention.nom_projet,
+                    "type_intervention": intervention.type_intervention,
+                    "statut": intervention.statut,
+                    "date_debut": intervention.date_debut,
+                    "date_fin": intervention.date_fin,
+                    "prestataire": intervention.prestataire,
+                    "description": intervention.description,
+                },
+            )
 
             messages.success(request, "Intervention mise à jour avec succès")
             return redirect("intervention-detail", id_intervention=intervention.id_intervention)
@@ -886,7 +1082,18 @@ def intervention_delete(request, id_intervention):
         return redirect("intervention-list")
 
     intervention = get_object_or_404(Intervention, id_intervention=id_intervention)
+    old_data = {
+        "id_patrimoine": intervention.id_patrimoine.id_patrimoine,
+        "nom_projet": intervention.nom_projet,
+        "type_intervention": intervention.type_intervention,
+        "statut": intervention.statut,
+        "date_debut": intervention.date_debut,
+        "date_fin": intervention.date_fin,
+        "prestataire": intervention.prestataire,
+        "description": intervention.description,
+    }
     intervention.delete()
+    _log_audit(request.user, "DELETE", "INTERVENTION", id_intervention, old_data=old_data)
     messages.success(request, "Intervention supprimée avec succès")
     return redirect("intervention-list")
 
@@ -927,6 +1134,14 @@ def document_list(request):
 def document_delete(request, id_document):
     """Delete a document/image (creator or admin only)."""
     document = get_object_or_404(Document, id_document=id_document)
+    old_data = {
+        "type_document": document.type_document,
+        "file_name": document.file_name,
+        "file_size_mb": document.file_size_mb,
+        "id_patrimoine": document.id_patrimoine.id_patrimoine if document.id_patrimoine else None,
+        "id_inspection": document.id_inspection.id_inspection if document.id_inspection else None,
+        "id_intervention": document.id_intervention.id_intervention if document.id_intervention else None,
+    }
     
     # Only creator, admin, or superadmin can delete
     if not (request.user.is_superuser or 
@@ -942,6 +1157,7 @@ def document_delete(request, id_document):
     
     # Delete database record
     document.delete()
+    _log_audit(request.user, "DELETE", "DOCUMENT", id_document, old_data=old_data)
     
     if patrimoine_id:
         return redirect("patrimoine-detail", id_patrimoine=patrimoine_id)

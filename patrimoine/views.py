@@ -1,3 +1,4 @@
+import csv
 import json
 import os
 import tempfile
@@ -12,7 +13,7 @@ from django.contrib.gis.gdal import DataSource
 from django.core.files.storage import default_storage
 from django.db import connection
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -135,6 +136,62 @@ def patrimoine_list(request):
         "patrimoine_statuts": Patrimoine.PATRIMOINE_STATUTS,
     }
     return render(request, "patrimoine/patrimoine_list.html", context)
+
+
+@login_required
+def patrimoine_export(request):
+    """Export patrimoines to CSV."""
+    if not _can_view(request.user):
+        return redirect("public-map")
+
+    # Apply same filters as list view
+    patrimoines = Patrimoine.objects.select_related("id_commune__id_province__id_region").all()
+    
+    search = request.GET.get("search", "").strip()
+    if search:
+        patrimoines = patrimoines.filter(nom_fr__icontains=search)
+    
+    type_filter = request.GET.get("type", "").strip()
+    if type_filter:
+        patrimoines = patrimoines.filter(type_patrimoine=type_filter)
+    
+    statut_filter = request.GET.get("statut", "").strip()
+    if statut_filter:
+        patrimoines = patrimoines.filter(statut=statut_filter)
+    
+    region_filter = request.GET.get("region", "").strip()
+    if region_filter:
+        patrimoines = patrimoines.filter(id_commune__id_province__id_region__id_region=region_filter)
+    
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="patrimoines_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    response.write('\ufeff')  # UTF-8 BOM for Excel
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID', 'Nom FR', 'Nom AR', 'Type', 'Statut', 'Référence Administrative',
+        'Description', 'Région', 'Province', 'Commune', 
+        'Créé le', 'Modifié le'
+    ])
+    
+    for p in patrimoines:
+        writer.writerow([
+            p.id_patrimoine,
+            p.nom_fr,
+            p.nom_ar or '',
+            p.get_type_patrimoine_display(),
+            p.get_statut_display(),
+            p.reference_administrative or '',
+            p.description or '',
+            p.id_commune.id_province.id_region.nom_region,
+            p.id_commune.id_province.nom_province,
+            p.id_commune.nom_commune,
+            p.created_at.strftime('%Y-%m-%d %H:%M:%S') if p.created_at else '',
+            p.updated_at.strftime('%Y-%m-%d %H:%M:%S') if p.updated_at else '',
+        ])
+    
+    return response
 
 
 @login_required
@@ -598,16 +655,91 @@ def inspection_list(request):
             status="PENDING"
         ).select_related("id_inspection__id_patrimoine", "requested_by")
     
+    inspecteurs = User.objects.filter(groups__name="INSPECTEUR").order_by("email").distinct()
+    patrimoines = Patrimoine.objects.only("id_patrimoine", "nom_fr").order_by("nom_fr")
+
+    etat_options = [
+        {"value": code, "label": label, "selected": code == etat_filter}
+        for code, label in Inspection.INSPECTION_ETAT
+    ]
+    inspecteur_options = [
+        {"id": insp.id, "email": insp.email, "selected": str(insp.id) == inspecteur_filter}
+        for insp in inspecteurs
+    ]
+    patrimoine_options = [
+        {
+            "id": pat.id_patrimoine,
+            "nom_fr": pat.nom_fr,
+            "selected": str(pat.id_patrimoine) == patrimoine_filter,
+        }
+        for pat in patrimoines
+    ]
+
     context = {
         "inspections": inspections,
         "pending_requests": pending_requests,
         "can_add": _can_add_inspection(request.user),
         "is_admin": _is_admin(request.user),
-        "inspection_etats": Inspection.INSPECTION_ETAT,
-        "inspecteurs": User.objects.filter(groups__name="INSPECTEUR").order_by("email").distinct(),
-        "patrimoines": Patrimoine.objects.only("id_patrimoine", "nom_fr").order_by("nom_fr"),
+        "etat_options": etat_options,
+        "inspecteur_options": inspecteur_options,
+        "patrimoine_options": patrimoine_options,
     }
     return render(request, "patrimoine/inspection_list.html", context)
+
+
+@login_required
+def inspection_export(request):
+    """Export inspections to CSV."""
+    inspections = Inspection.objects.select_related("id_patrimoine", "id_inspecteur").all()
+    
+    # Apply same filters as list view
+    search = request.GET.get("search", "").strip()
+    etat_filter = request.GET.get("etat", "").strip()
+    inspecteur_filter = request.GET.get("inspecteur", "").strip()
+    patrimoine_filter = request.GET.get("patrimoine", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+    
+    if search:
+        inspections = inspections.filter(
+            Q(id_patrimoine__nom_fr__icontains=search)
+            | Q(id_inspecteur__email__icontains=search)
+        )
+    if etat_filter:
+        inspections = inspections.filter(etat=etat_filter)
+    if inspecteur_filter:
+        inspections = inspections.filter(id_inspecteur__id=inspecteur_filter)
+    if patrimoine_filter:
+        inspections = inspections.filter(id_patrimoine__id_patrimoine=patrimoine_filter)
+    if date_from:
+        inspections = inspections.filter(date_inspection__gte=date_from)
+    if date_to:
+        inspections = inspections.filter(date_inspection__lte=date_to)
+    
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="inspections_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    response.write('\ufeff')  # UTF-8 BOM for Excel
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID', 'Patrimoine', 'Inspecteur', 'Date Inspection', 'État', 
+        'Observations', 'Créé le', 'Modifié le'
+    ])
+    
+    for i in inspections:
+        writer.writerow([
+            i.id_inspection,
+            i.id_patrimoine.nom_fr,
+            i.id_inspecteur.email if i.id_inspecteur else '',
+            i.date_inspection.strftime('%Y-%m-%d') if i.date_inspection else '',
+            i.get_etat_display(),
+            i.observations or '',
+            i.created_at.strftime('%Y-%m-%d %H:%M:%S') if i.created_at else '',
+            i.updated_at.strftime('%Y-%m-%d %H:%M:%S') if i.updated_at else '',
+        ])
+    
+    return response
 
 
 @login_required
@@ -770,7 +902,7 @@ def inspection_request_approve(request, id_request):
 
         _log_audit(
             request.user,
-            "APPROVE",
+            "REQUEST_APPROVE",
             "INSPECTION_REQUEST",
             mod_request.id_request,
             new_data={
@@ -816,7 +948,7 @@ def inspection_request_reject(request, id_request):
 
     _log_audit(
         request.user,
-        "REJECT",
+        "REQUEST_REJECT",
         "INSPECTION_REQUEST",
         mod_request.id_request,
         new_data={
@@ -863,6 +995,67 @@ def intervention_list(request):
         "intervention_statuts": Intervention.INTERVENTION_STATUTS,
     }
     return render(request, "patrimoine/intervention_list.html", context)
+
+
+@login_required
+def intervention_export(request):
+    """Export interventions to CSV."""
+    if not _can_edit(request.user):
+        return redirect("patrimoine-list")
+    
+    interventions = Intervention.objects.select_related("id_patrimoine", "created_by").order_by("-created_at")
+    
+    # Apply same filters as list view
+    search = request.GET.get("search", "").strip()
+    type_filter = request.GET.get("type", "").strip()
+    statut_filter = request.GET.get("statut", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+    
+    if search:
+        interventions = interventions.filter(
+            Q(nom_projet__icontains=search)
+            | Q(id_patrimoine__nom_fr__icontains=search)
+            | Q(prestataire__icontains=search)
+        )
+    if type_filter:
+        interventions = interventions.filter(type_intervention=type_filter)
+    if statut_filter:
+        interventions = interventions.filter(statut=statut_filter)
+    if date_from:
+        interventions = interventions.filter(date_debut__gte=date_from)
+    if date_to:
+        interventions = interventions.filter(date_debut__lte=date_to)
+    
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="interventions_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    response.write('\ufeff')  # UTF-8 BOM for Excel
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID', 'Patrimoine', 'Nom Projet', 'Type', 'Statut', 'Date Début', 
+        'Date Fin', 'Prestataire', 'Description', 'Créé par', 
+        'Créé le', 'Modifié le'
+    ])
+    
+    for i in interventions:
+        writer.writerow([
+            i.id_intervention,
+            i.id_patrimoine.nom_fr,
+            i.nom_projet,
+            i.get_type_intervention_display(),
+            i.get_statut_display(),
+            i.date_debut.strftime('%Y-%m-%d') if i.date_debut else '',
+            i.date_fin.strftime('%Y-%m-%d') if i.date_fin else '',
+            i.prestataire or '',
+            i.description or '',
+            i.created_by.email if i.created_by else '',
+            i.created_at.strftime('%Y-%m-%d %H:%M:%S') if i.created_at else '',
+            i.updated_at.strftime('%Y-%m-%d %H:%M:%S') if i.updated_at else '',
+        ])
+    
+    return response
 
 
 @login_required

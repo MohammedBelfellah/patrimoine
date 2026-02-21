@@ -2,29 +2,155 @@
 {% block title %}Patrimoines{% endblock %}
 {% block head_extra %}
 <style>
-  .page-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .page-title h2 { margin: 0; font-size: 2.2rem; font-weight: 700; color: #1f2937; }
-  .filter-wrap { background: #fff; border-radius: 12px; box-shadow: 0 4px 14px rgba(2,6,23,.08); overflow: hidden; margin-bottom: 14px; }
-  .filter-head { background: linear-gradient(90deg, #1f6bdd, #2570ea); color: #fff; font-size: 1.05rem; font-weight: 700; padding: 10px 16px; }
-  .filter-body { padding: 14px 16px; }
-  .filter-grid { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); gap: 10px; }
-  .filter-actions { margin-top: 10px; display: flex; gap: 10px; }
-  table { width: 100%; border-collapse: collapse; background: #fff; }
-  thead th { background: #18202b; color: #fff; font-size: 1.03rem; font-weight: 700; border: none; }
-  th, td { padding: 12px; text-align: left; border-bottom: 1px solid #d8dee6; font-size: .98rem; }
-  tr:hover { background: #f6f8fb; }
-  .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-  .badge-mondial { background: #d1ecff; color: #0b4f75; }
-  .badge-naturel { background: #d1f0e0; color: #0a5130; }
-  .badge-historique { background: #d9e5ff; color: #113b8b; }
-  .badge-autre { background: #e2e3e5; color: #333; }
-  .actions { white-space: nowrap; }
-  .btn-action { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 6px; margin-right: 6px; border: 1px solid; text-decoration: none; }
-  .btn-view { color: #2563eb; border-color: #93c5fd; background: #eff6ff; }
-  .btn-edit { color: #d97706; border-color: #fcd34d; background: #fffbeb; }
-  .btn-del { color: #dc2626; border-color: #fca5a5; background: #fef2f2; }
-  .results-count { color: #4b5563; margin: 8px 0 12px; font-size: .98rem; }
-  @media (max-width: 1200px) { .filter-grid { grid-template-columns: 1fr 1fr; } .page-title h2 { font-size: 1.7rem; } }
+  .page-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .page-title h2 {
+    margin: 0;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #1f2937;
+  }
+
+  .filter-wrap {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(2, 6, 23, .08);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+
+  .filter-head {
+    background: linear-gradient(90deg, #1f6bdd, #2570ea);
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 700;
+    padding: 10px 16px;
+  }
+
+  .filter-body {
+    padding: 14px 16px;
+  }
+
+  .filter-grid {
+    display: grid;
+    grid-template-columns: 1.4fr repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .filter-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+  }
+
+  thead th {
+    background: #18202b;
+    color: #fff;
+    font-size: 1.03rem;
+    font-weight: 700;
+    border: none;
+  }
+
+  th,
+  td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #d8dee6;
+    font-size: .98rem;
+  }
+
+  tr:hover {
+    background: #f6f8fb;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  .badge-mondial {
+    background: #d1ecff;
+    color: #0b4f75;
+  }
+
+  .badge-naturel {
+    background: #d1f0e0;
+    color: #0a5130;
+  }
+
+  .badge-historique {
+    background: #d9e5ff;
+    color: #113b8b;
+  }
+
+  .badge-autre {
+    background: #e2e3e5;
+    color: #333;
+  }
+
+  .actions {
+    white-space: nowrap;
+  }
+
+  .btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    margin-right: 6px;
+    border: 1px solid;
+    text-decoration: none;
+  }
+
+  .btn-view {
+    color: #2563eb;
+    border-color: #93c5fd;
+    background: #eff6ff;
+  }
+
+  .btn-edit {
+    color: #d97706;
+    border-color: #fcd34d;
+    background: #fffbeb;
+  }
+
+  .btn-del {
+    color: #dc2626;
+    border-color: #fca5a5;
+    background: #fef2f2;
+  }
+
+  .results-count {
+    color: #4b5563;
+    margin: 8px 0 12px;
+    font-size: .98rem;
+  }
+
+  @media (max-width: 1200px) {
+    .filter-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .page-title h2 {
+      font-size: 1.7rem;
+    }
+  }
 </style>
 {% endblock %}
 {% block content %}
@@ -32,8 +158,11 @@
   <div class="page-title">
     <h2><i class="bi bi-buildings"></i> Liste des Patrimoines</h2>
     {% if can_edit %}
-    <div>
-      <a href="{% url 'patrimoine-create' %}" class="btn btn-success btn-lg"><i class="bi bi-plus-circle"></i> Ajouter un Patrimoine</a>
+    <div style="display: flex; gap: 10px;">
+      <a href="{% url 'patrimoine-export' %}?{{ request.GET.urlencode }}" class="btn btn-primary btn-lg"><i
+          class="bi bi-download"></i> Exporter CSV</a>
+      <a href="{% url 'patrimoine-create' %}" class="btn btn-success btn-lg"><i class="bi bi-plus-circle"></i> Ajouter
+        un Patrimoine</a>
     </div>
     {% endif %}
   </div>
@@ -41,49 +170,55 @@
   <div class="filter-wrap">
     <div class="filter-head"><i class="bi bi-search"></i> Recherche et Filtres</div>
     <div class="filter-body">
-    <form method="get">
-      <div class="filter-grid">
-      <div>
-      <label>Recherche</label>
-      <input type="text" name="search" placeholder="Nom, référence, localisation..." value="{{ request.GET.search }}" />
-      </div>
-      <div>
-      <label>Type</label>
-      <select name="type">
-        <option value="">-- Tous les types --</option>
-        {% for code, label in patrimoine_types %}
-        <option value="{{ code }}" {% if request.GET.type == code %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-      </div>
-      <div>
-      <label>Protection</label>
-      <select name="statut">
-        <option value="">-- Tous les statuts --</option>
-        {% for code, label in patrimoine_statuts %}
-        <option value="{{ code }}" {% if request.GET.statut == code %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-      </div>
-      <div>
-      <label>Zone</label>
-      <select name="region">
-        <option value="">-- Toutes les régions --</option>
-        {% for region in regions %}
-        <option value="{{ region.id_region }}" {% if request.GET.region == region.id_region|stringformat:"s" %}selected{% endif %}>{{ region.nom_region }}</option>
-        {% endfor %}
-      </select>
-      </div>
-      </div>
-      <div class="filter-actions">
-      <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Appliquer les filtres</button>
-      <a href="{% url 'patrimoine-list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-circle"></i> Réinitialiser</a>
-      </div>
-    </form>
+      <form method="get">
+        <div class="filter-grid">
+          <div>
+            <label>Recherche</label>
+            <input type="text" name="search" placeholder="Nom, référence, localisation..."
+              value="{{ request.GET.search }}" />
+          </div>
+          <div>
+            <label>Type</label>
+            <select name="type">
+              <option value="">-- Tous les types --</option>
+              {% for code, label in patrimoine_types %}
+              <!-- prettier-ignore -->
+              <option value="{{ code }}" {% if request.GET.type == code %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label>Protection</label>
+            <select name="statut">
+              <option value="">-- Tous les statuts --</option>
+              {% for code, label in patrimoine_statuts %}
+              <!-- prettier-ignore -->
+              <option value="{{ code }}" {% if request.GET.statut == code %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label>Zone</label>
+            <select name="region">
+              <option value="">-- Toutes les régions --</option>
+              {% for region in regions %}
+              <!-- prettier-ignore -->
+              <option value="{{ region.id_region }}" {% if request.GET.region == region.id_region|stringformat:"s" %}selected{% endif %}>{{ region.nom_region }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="filter-actions">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Appliquer les filtres</button>
+          <a href="{% url 'patrimoine-list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-circle"></i>
+            Réinitialiser</a>
+        </div>
+      </form>
     </div>
   </div>
 
-  <p class="results-count"><i class="bi bi-square-fill" style="font-size:.65rem;"></i> {{ patrimoines|length }} patrimoine(s) trouvé(s)</p>
+  <p class="results-count"><i class="bi bi-square-fill" style="font-size:.65rem;"></i> {{ patrimoines|length }}
+    patrimoine(s) trouvé(s)</p>
 
   {% if patrimoines %}
   <table>
@@ -110,11 +245,14 @@
         <td><small>{{ p.full_location }}</small></td>
         <td>{{ p.created_by.email }}</td>
         <td class="actions">
-          <a href="{% url 'patrimoine-detail' p.id_patrimoine %}" class="btn-action btn-view" title="Voir"><i class="bi bi-eye"></i></a>
+          <a href="{% url 'patrimoine-detail' p.id_patrimoine %}" class="btn-action btn-view" title="Voir"><i
+              class="bi bi-eye"></i></a>
           {% if can_edit %}
-          <a href="{% url 'patrimoine-edit' p.id_patrimoine %}" class="btn-action btn-edit" title="Éditer"><i class="bi bi-pencil"></i></a>
+          <a href="{% url 'patrimoine-edit' p.id_patrimoine %}" class="btn-action btn-edit" title="Éditer"><i
+              class="bi bi-pencil"></i></a>
           {% if user.is_superuser %}
-          <form method="post" action="{% url 'patrimoine-delete' p.id_patrimoine %}" style="display:inline;" onsubmit="return confirm('Confirmer suppression?');">
+          <form method="post" action="{% url 'patrimoine-delete' p.id_patrimoine %}" style="display:inline;"
+            onsubmit="return confirm('Confirmer suppression?');">
             {% csrf_token %}
             <button type="submit" class="btn-action btn-del" title="Supprimer"><i class="bi bi-trash"></i></button>
           </form>

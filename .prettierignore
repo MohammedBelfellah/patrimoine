@@ -1,1 +1,2 @@
-patrimoine/templates/**/*.html
+patrimoine/templates/**/*
+**/*.html

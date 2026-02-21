@@ -104,10 +104,15 @@
 <div class="card">
     <div class="page-title">
         <h2><i class="bi bi-clipboard-check"></i> Inspections</h2>
-        {% if can_add %}
-        <a href="{% url 'inspection-create' %}" class="btn btn-success btn-lg"><i class="bi bi-plus-circle"></i> Ajouter
-            une inspection</a>
-        {% endif %}
+        <div style="display: flex; gap: 10px;">
+            <a href="{% url 'inspection-export' %}?{{ request.GET.urlencode }}" class="btn btn-primary btn-lg"><i
+                    class="bi bi-download"></i> Exporter CSV</a>
+            {% if can_add %}
+            <a href="{% url 'inspection-create' %}" class="btn btn-success btn-lg"><i class="bi bi-plus-circle"></i>
+                Ajouter
+                une inspection</a>
+            {% endif %}
+        </div>
     </div>
 
     <div class="filter-wrap">
@@ -124,9 +129,8 @@
                         <label>Etat</label>
                         <select name="etat">
                             <option value="">-- Tous les etats --</option>
-                            {% for code, label in inspection_etats %}
-                            <!-- prettier-ignore -->
-                            <option value="{{ code }}" {% if request.GET.etat == code %}selected{% endif %}>{{ label }}
+                            {% for opt in etat_options %}
+                            <option value="{{ opt.value }}" {% if opt.selected %} selected{% endif %}>{{ opt.label }}
                             </option>
                             {% endfor %}
                         </select>
@@ -135,9 +139,9 @@
                         <label>Inspecteur</label>
                         <select name="inspecteur">
                             <option value="">-- Tous --</option>
-                            {% for insp in inspecteurs %}
-                            <!-- prettier-ignore -->
-                            <option value="{{ insp.id }}" {% if request.GET.inspecteur == insp.id|stringformat:"s" %}selected{% endif %}>{{ insp.email }}</option>
+                            {% for opt in inspecteur_options %}
+                            <option value="{{ opt.id }}" {% if opt.selected %} selected{% endif %}>{{ opt.email }}
+                            </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -145,9 +149,9 @@
                         <label>Patrimoine</label>
                         <select name="patrimoine">
                             <option value="">-- Tous --</option>
-                            {% for pat in patrimoines %}
-                            <!-- prettier-ignore -->
-                            <option value="{{ pat.id_patrimoine }}" {% if request.GET.patrimoine == pat.id_patrimoine|stringformat:"s" %}selected{% endif %}>{{ pat.nom_fr }}</option>
+                            {% for opt in patrimoine_options %}
+                            <option value="{{ opt.id }}" {% if opt.selected %} selected{% endif %}>{{ opt.nom_fr }}
+                            </option>
                             {% endfor %}
                         </select>
                     </div>

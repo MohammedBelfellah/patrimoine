@@ -1,28 +1,90 @@
 {% extends "core/base.html" %}
 {% block title %}{% if patrimoine %}Éditer{% else %}Ajouter{% endif %} patrimoine{% endblock %}
 {% block head_extra %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 <style>
-  #map { height: 500px; margin: 16px 0; border-radius: 8px; }
-  form { display: flex; flex-direction: column; gap: 16px; }
-  .form-group { display: flex; flex-direction: column; }
-  label { font-weight: bold; margin-bottom: 4px; }
-  input, select, textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-  textarea { min-height: 100px; }
-  .form-row { display: flex; gap: 16px; }
-  .form-row > .form-group { flex: 1; }
-  button { padding: 10px 16px; background: #1d4ed8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-  button:hover { background: #1e40af; }
-  .error { color: #dc2626; padding: 12px; background: #fee2e2; border-radius: 4px; margin-bottom: 16px; }
-  .info { color: #0369a1; padding: 12px; background: #e0f2fe; border-radius: 4px; margin-bottom: 16px; }
+  #map {
+    height: 500px;
+    margin: 16px 0;
+    border-radius: 8px;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  label {
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+
+  input,
+  select,
+  textarea {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+
+  textarea {
+    min-height: 100px;
+  }
+
+  .form-row {
+    display: flex;
+    gap: 16px;
+  }
+
+  .form-row>.form-group {
+    flex: 1;
+  }
+
+  button {
+    padding: 10px 16px;
+    background: #1d4ed8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  button:hover {
+    background: #1e40af;
+  }
+
+  .error {
+    color: #dc2626;
+    padding: 12px;
+    background: #fee2e2;
+    border-radius: 4px;
+    margin-bottom: 16px;
+  }
+
+  .info {
+    color: #0369a1;
+    padding: 12px;
+    background: #e0f2fe;
+    border-radius: 4px;
+    margin-bottom: 16px;
+  }
 </style>
 {% endblock %}
 {% block content %}
 <div class="card">
   <h2>{% if patrimoine %}Éditer: {{ patrimoine.nom_fr }}{% else %}Ajouter un nouveau patrimoine{% endif %}</h2>
 
-  <div class="info">ℹ️ Dessinez ou importez le polygone du patrimoine sur la carte ci-dessous.</div>
+  <div class="info"><i class="bi bi-info-circle"></i> Dessinez ou importez le polygone du patrimoine sur la carte
+    ci-dessous.</div>
 
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
@@ -44,7 +106,7 @@
         <select id="type_patrimoine" name="type_patrimoine" required>
           <option value="">-- Sélectionner --</option>
           {% for code, label in patrimoine_types %}
-          <option value="{{ code }}" {% if patrimoine.type_patrimoine == code %}selected{% endif %}>{{ label }}</option>
+          <option value="{{ code }}" {% if patrimoine.type_patrimoine==code %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
       </div>
@@ -52,7 +114,7 @@
         <label for="statut">Statut</label>
         <select id="statut" name="statut">
           {% for code, label in patrimoine_statuts %}
-          <option value="{{ code }}" {% if patrimoine.statut == code %}selected{% endif %}>{{ label }}</option>
+          <option value="{{ code }}" {% if patrimoine.statut==code %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
       </div>
@@ -60,7 +122,8 @@
 
     <div class="form-group">
       <label for="reference_administrative">Référence administrative</label>
-      <input type="text" id="reference_administrative" name="reference_administrative" value="{{ patrimoine.reference_administrative }}" />
+      <input type="text" id="reference_administrative" name="reference_administrative"
+        value="{{ patrimoine.reference_administrative }}" />
     </div>
 
     <div class="form-group">
@@ -69,23 +132,28 @@
     </div>
 
     <div class="form-group">
-      <label for="images">📷 Images (max 5 images, 5MB chacune)</label>
+      <label for="images"><i class="bi bi-camera"></i> Images (max 5 images, 5MB chacune)</label>
       {% if patrimoine and current_images %}
       <div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
         <strong style="color: #666;">Images actuelles ({{ current_images|length }}/5):</strong>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 8px;">
+        <div
+          style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 8px;">
           {% for image in current_images %}
           <div style="border: 2px solid #e5e7eb; border-radius: 8px; overflow: hidden; position: relative;">
-            <img src="/media/{{ image.file_path }}" alt="{{ image.file_name }}" style="width: 100%; height: 100px; object-fit: cover;">
-            <div style="padding: 4px; background: white; font-size: 10px; color: #666; text-align: center;">{{ image.file_name|truncatechars:15 }}</div>
+            <img src="/media/{{ image.file_path }}" alt="{{ image.file_name }}"
+              style="width: 100%; height: 100px; object-fit: cover;">
+            <div style="padding: 4px; background: white; font-size: 10px; color: #666; text-align: center;">{{
+              image.file_name|truncatechars:15 }}</div>
           </div>
           {% endfor %}
         </div>
-        <p style="margin: 8px 0 0 0; font-size: 12px; color: #666;"><small>Pour supprimer une image, utilisez le bouton sur la page de détails.</small></p>
+        <p style="margin: 8px 0 0 0; font-size: 12px; color: #666;"><small>Pour supprimer une image, utilisez le bouton
+            sur la page de détails.</small></p>
       </div>
       {% endif %}
       <input type="file" id="images" name="images" accept="image/jpeg,image/png,image/gif,image/webp" multiple />
-      <p class="muted" style="margin-top: 4px;"><small>Formats acceptés: JPG, PNG, GIF, WEBP. Maximum 5 images au total.</small></p>
+      <p class="muted" style="margin-top: 4px;"><small>Formats acceptés: JPG, PNG, GIF, WEBP. Maximum 5 images au
+          total.</small></p>
       <div id="image-preview" style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;"></div>
     </div>
 
@@ -95,7 +163,9 @@
         <select id="region" name="region" required onchange="updateProvinces()">
           <option value="">-- Sélectionner --</option>
           {% for region in regions %}
-          <option value="{{ region.id_region }}" {% if patrimoine.id_commune.id_province.id_region.id_region == region.id_region %}selected{% endif %}>{{ region.nom_region }}</option>
+          <option value="{{ region.id_region }}" {% if
+            patrimoine.id_commune.id_province.id_region.id_region==region.id_region %}selected{% endif %}>{{
+            region.nom_region }}</option>
           {% endfor %}
         </select>
       </div>
@@ -104,7 +174,9 @@
         <select id="province" name="province" required onchange="updateCommunes()">
           <option value="">-- Sélectionner --</option>
           {% for province in provinces %}
-          <option value="{{ province.id_province }}" {% if patrimoine.id_commune.id_province.id_province == province.id_province %}selected{% endif %}>{{ province.nom_province }}</option>
+          <option value="{{ province.id_province }}" {% if
+            patrimoine.id_commune.id_province.id_province==province.id_province %}selected{% endif %}>{{
+            province.nom_province }}</option>
           {% endfor %}
         </select>
       </div>
@@ -115,7 +187,8 @@
       <select id="id_commune" name="id_commune" required>
         <option value="">-- Sélectionner --</option>
         {% for commune in communes %}
-        <option value="{{ commune.id_commune }}" {% if patrimoine.id_commune.id_commune == commune.id_commune %}selected{% endif %}>{{ commune.nom_commune }}</option>
+        <option value="{{ commune.id_commune }}" {% if patrimoine.id_commune.id_commune==commune.id_commune %}selected{%
+          endif %}>{{ commune.nom_commune }}</option>
         {% endfor %}
       </select>
     </div>
@@ -129,17 +202,20 @@
       </div>
       <div id="map"></div>
       <input type="hidden" id="geojson" name="geojson" value="" />
-      <p class="muted"><small>Utilisez les outils de dessin pour créer le polygone, ou importez un fichier valide.</small></p>
+      <p class="muted"><small>Utilisez les outils de dessin pour créer le polygone, ou importez un fichier
+          valide.</small></p>
     </div>
 
     <div>
       <button type="submit">{% if patrimoine %}Mettre à jour{% else %}Créer{% endif %}</button>
-      <a href="{% url 'patrimoine-list' %}" class="btn btn-secondary" style="padding: 10px 16px; text-decoration: none; background: #6b7280; display: inline-block;">Annuler</a>
+      <a href="{% url 'patrimoine-list' %}" class="btn btn-secondary"
+        style="padding: 10px 16px; text-decoration: none; background: #6b7280; display: inline-block;">Annuler</a>
     </div>
   </form>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script src="https://unpkg.com/@tmcw/togeojson@5.8.1/dist/togeojson.umd.js"></script>
 <script>
@@ -158,12 +234,12 @@
   });
   map.addControl(drawControl);
 
-  map.on('draw:created', function(e) {
+  map.on('draw:created', function (e) {
     const layer = e.layer;
     if (layer instanceof L.Polygon || layer instanceof L.Rectangle) {
       drawnItems.clearLayers();
       drawnItems.addLayer(layer);
-      
+
       // Convert to MultiPolygon format
       const geom = layer.toGeoJSON().geometry;
       const multiPolygon = {
@@ -174,9 +250,9 @@
     }
   });
 
-  map.on('draw:edited', function(e) {
+  map.on('draw:edited', function (e) {
     const layers = e.layers;
-    layers.eachLayer(function(layer) {
+    layers.eachLayer(function (layer) {
       if (layer instanceof L.Polygon || layer instanceof L.Rectangle) {
         // Convert to MultiPolygon format
         const geom = layer.toGeoJSON().geometry;
@@ -193,15 +269,15 @@
     const regionId = document.getElementById('region').value;
     const provinceSelect = document.getElementById('province');
     const communeSelect = document.getElementById('id_commune');
-    
+
     // Reset commune select
     communeSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
-    
+
     if (!regionId) {
       provinceSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
       return;
     }
-    
+
     fetch(`/api/provinces/${regionId}/`)
       .then(r => r.json())
       .then(data => {
@@ -219,12 +295,12 @@
   function updateCommunes() {
     const provinceId = document.getElementById('province').value;
     const communeSelect = document.getElementById('id_commune');
-    
+
     if (!provinceId) {
       communeSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
       return;
     }
-    
+
     fetch(`/api/communes/${provinceId}/`)
       .then(r => r.json())
       .then(data => {
@@ -301,7 +377,7 @@
   });
 
   {% if patrimoine.polygon_geom %}
-  const geomJson = {{ patrimoine_geojson|safe }};
+  const geomJson = {{ patrimoine_geojson| safe }};
   const layer = L.geoJSON(geomJson).getLayers()[0];
   drawnItems.addLayer(layer);
   map.fitBounds(layer.getBounds());
@@ -309,27 +385,27 @@
   {% endif %}
 
   // Image upload preview
-  document.getElementById('images').addEventListener('change', function(e) {
+  document.getElementById('images').addEventListener('change', function (e) {
     const preview = document.getElementById('image-preview');
     preview.innerHTML = '';
     const files = Array.from(e.target.files);
-    
+
     if (files.length > 5) {
-      alert('⚠️ Maximum 5 images autorisées');
+      alert('Maximum 5 images autorisées');
       e.target.value = '';
       return;
     }
-    
+
     files.forEach((file, index) => {
       if (file.size > 5 * 1024 * 1024) {
-        alert(`⚠️ "${file.name}" dépasse 5MB`);
+        alert(`"${file.name}" dépasse 5MB`);
         e.target.value = '';
         preview.innerHTML = '';
         return;
       }
-      
+
       const reader = new FileReader();
-      reader.onload = function(event) {
+      reader.onload = function (event) {
         const img = document.createElement('img');
         img.src = event.target.result;
         img.style.width = '100px';

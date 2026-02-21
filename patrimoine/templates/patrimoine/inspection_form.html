@@ -2,15 +2,64 @@
 {% block title %}Ajouter inspection{% endblock %}
 {% block head_extra %}
 <style>
-  form { display: flex; flex-direction: column; gap: 16px; }
-  .form-group { display: flex; flex-direction: column; }
-  label { font-weight: bold; margin-bottom: 4px; }
-  input, select, textarea { padding: 8px; width: 100%; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-  textarea { min-height: 100px; }
-  button { padding: 10px 16px; background: #1d4ed8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-  button:hover { background: #1e40af; }
-  .error { color: #dc2626; padding: 12px; background: #fee2e2; border-radius: 4px; margin-bottom: 16px; }
-  .info { background: #dbeafe; border-left: 4px solid #1d4ed8; padding: 12px; margin-bottom: 16px; }
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  label {
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+
+  input,
+  select,
+  textarea {
+    padding: 8px;
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+
+  textarea {
+    min-height: 100px;
+  }
+
+  button {
+    padding: 10px 16px;
+    background: #1d4ed8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  button:hover {
+    background: #1e40af;
+  }
+
+  .error {
+    color: #dc2626;
+    padding: 12px;
+    background: #fee2e2;
+    border-radius: 4px;
+    margin-bottom: 16px;
+  }
+
+  .info {
+    background: #dbeafe;
+    border-left: 4px solid #1d4ed8;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
 </style>
 {% endblock %}
 {% block content %}
@@ -18,11 +67,13 @@
   <h2>Ajouter une inspection</h2>
 
   <div class="info">
-    <strong>ℹ️ Réservé aux Inspecteurs:</strong> Seuls les utilisateurs avec le rôle "Inspecteur" peuvent créer des inspections. Les administrateurs peuvent uniquement consulter et approuver les demandes de modification.
+    <strong><i class="bi bi-info-circle"></i> Réservé aux Inspecteurs:</strong> Seuls les utilisateurs avec le rôle
+    "Inspecteur" peuvent créer des inspections. Les administrateurs peuvent uniquement consulter et approuver les
+    demandes de modification.
   </div>
 
   {% if error %}
-  <div class="error">❌ {{ error }}</div>
+  <div class="error"><i class="bi bi-x-circle"></i> {{ error }}</div>
   {% endif %}
 
   <form method="post">
@@ -84,7 +135,8 @@
 
     <div style="display: flex; gap: 10px;">
       <button type="submit" style="flex: 1;">Créer inspection</button>
-      <a href="{% url 'inspection-list' %}" class="btn btn-secondary" style="padding: 10px 16px; text-decoration: none; background: #6b7280; color: white; display: flex; align-items: center; justify-content: center; border-radius: 4px; flex: 1;">Annuler</a>
+      <a href="{% url 'inspection-list' %}" class="btn btn-secondary"
+        style="padding: 10px 16px; text-decoration: none; background: #6b7280; color: white; display: flex; align-items: center; justify-content: center; border-radius: 4px; flex: 1;">Annuler</a>
     </div>
   </form>
 </div>
@@ -92,21 +144,21 @@
 <script>
   // Get list of regions
   const regionApi = '/api/regions/';
-  
+
   function updateInspectionProvinces() {
     const regionId = document.getElementById('id_region').value;
     const provinceSelect = document.getElementById('id_province');
     const communeSelect = document.getElementById('id_commune');
     const patrimoineSelect = document.getElementById('id_patrimoine');
-    
+
     communeSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
     patrimoineSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
-    
+
     if (!regionId) {
       provinceSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
       return;
     }
-    
+
     fetch(`/api/provinces/${regionId}/`)
       .then(r => r.json())
       .then(data => {
@@ -125,14 +177,14 @@
     const provinceId = document.getElementById('id_province').value;
     const communeSelect = document.getElementById('id_commune');
     const patrimoineSelect = document.getElementById('id_patrimoine');
-    
+
     patrimoineSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
-    
+
     if (!provinceId) {
       communeSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
       return;
     }
-    
+
     fetch(`/api/communes/${provinceId}/`)
       .then(r => r.json())
       .then(data => {
@@ -150,12 +202,12 @@
   function updateInspectionPatrimoines() {
     const communeId = document.getElementById('id_commune').value;
     const patrimoineSelect = document.getElementById('id_patrimoine');
-    
+
     if (!communeId) {
       patrimoineSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
       return;
     }
-    
+
     fetch(`/api/patrimoines-by-commune/${communeId}/`)
       .then(r => r.json())
       .then(data => {

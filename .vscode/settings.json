@@ -11,5 +11,17 @@
             "password": "patrimoine",
             "name": "patrimoine"
         }
-    ]
+    ],
+    "files.associations": {
+        "*.html": "django-html"
+    },
+    "[django-html]": {
+        "editor.formatOnSave": false
+    },
+    "[html]": {
+        "editor.formatOnSave": false
+    },
+    "emmet.includeLanguages": {
+        "django-html": "html"
+    }
 }

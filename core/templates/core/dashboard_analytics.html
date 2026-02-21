@@ -2,21 +2,62 @@
 {% block title %}Tableau de Bord{% endblock %}
 {% block head_extra %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <style>
-  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
-  .kpi { background: #fff; border: 1px solid rgba(148,163,184,.35); border-radius: 12px; padding: 14px; }
-  .kpi .v { font-size: 2rem; font-weight: 700; color: #0f172a; }
-  .panel-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; margin-top: 12px; }
-  .panel { background:#fff; border:1px solid rgba(148,163,184,.35); border-radius:12px; padding:12px; }
-  .panel h5 { margin: 0 0 8px 0; }
-  .mini-map { height: 320px; border-radius: 10px; border:1px solid rgba(148,163,184,.35); }
-  @media (max-width: 1100px) { .panel-grid { grid-template-columns: 1fr; } }
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px;
+  }
+
+  .kpi {
+    background: #fff;
+    border: 1px solid rgba(148, 163, 184, .35);
+    border-radius: 12px;
+    padding: 14px;
+  }
+
+  .kpi .v {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .panel-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .panel {
+    background: #fff;
+    border: 1px solid rgba(148, 163, 184, .35);
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .panel h5 {
+    margin: 0 0 8px 0;
+  }
+
+  .mini-map {
+    height: 320px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, .35);
+  }
+
+  @media (max-width: 1100px) {
+    .panel-grid {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
 {% endblock %}
 {% block content %}
 <div class="card">
-  <h2>📈 Tableau de Bord</h2>
+  <h2><i class="bi bi-bar-chart"></i> Tableau de Bord</h2>
   <p class="muted">Statistiques, graphiques et mini carte interactive.</p>
 
   <div class="kpi-grid mt-3">
@@ -39,11 +80,21 @@
   </div>
 
   <div class="panel-grid">
-    <div class="panel"><h5>Répartition par type</h5><canvas id="chartType"></canvas></div>
-    <div class="panel"><h5>Répartition par statut</h5><canvas id="chartStatut"></canvas></div>
-    <div class="panel"><h5>Patrimoines par région</h5><canvas id="chartRegion"></canvas></div>
-    <div class="panel"><h5>État des inspections</h5><canvas id="chartInspection"></canvas></div>
-    <div class="panel"><h5>Statut interventions</h5><canvas id="chartIntervention"></canvas></div>
+    <div class="panel">
+      <h5>Répartition par type</h5><canvas id="chartType"></canvas>
+    </div>
+    <div class="panel">
+      <h5>Répartition par statut</h5><canvas id="chartStatut"></canvas>
+    </div>
+    <div class="panel">
+      <h5>Patrimoines par région</h5><canvas id="chartRegion"></canvas>
+    </div>
+    <div class="panel">
+      <h5>État des inspections</h5><canvas id="chartInspection"></canvas>
+    </div>
+    <div class="panel">
+      <h5>Statut interventions</h5><canvas id="chartIntervention"></canvas>
+    </div>
     <div class="panel">
       <h5>Mini carte interactive (centroïdes)</h5>
       <div id="miniMap" class="mini-map"></div>
@@ -51,16 +102,17 @@
   </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
-  const byType = {{ by_type_json|safe }};
-  const byStatut = {{ by_statut_json|safe }};
-  const byRegion = {{ by_region_json|safe }};
-  const inspectionState = {{ inspection_state_json|safe }};
-  const interventionStatus = {{ intervention_status_json|safe }};
-  const centroids = {{ centroids_json|safe }};
+  const byType = {{ by_type_json| safe }};
+  const byStatut = {{ by_statut_json| safe }};
+  const byRegion = {{ by_region_json| safe }};
+  const inspectionState = {{ inspection_state_json| safe }};
+  const interventionStatus = {{ intervention_status_json| safe }};
+  const centroids = {{ centroids_json| safe }};
 
-  const chartColors = ['#3b82f6','#10b981','#f97316','#8b5cf6','#ef4444','#06b6d4','#84cc16','#f59e0b'];
+  const chartColors = ['#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#ef4444', '#06b6d4', '#84cc16', '#f59e0b'];
 
   function makeBarChart(id, labels, values) {
     new Chart(document.getElementById(id), {

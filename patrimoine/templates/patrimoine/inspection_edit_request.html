@@ -2,25 +2,81 @@
 {% block title %}Demander modification - Inspection{% endblock %}
 {% block head_extra %}
 <style>
-  form { display: flex; flex-direction: column; gap: 16px; }
-  .form-group { display: flex; flex-direction: column; }
-  label { font-weight: bold; margin-bottom: 4px; }
-  input, select, textarea { padding: 8px; width: 100%; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-  textarea { min-height: 100px; }
-  button { padding: 10px 16px; background: #1d4ed8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-  button:hover { background: #1e40af; }
-  .error { color: #dc2626; padding: 12px; background: #fee2e2; border-radius: 4px; margin-bottom: 16px; }
-  .info { background: #dbeafe; border-left: 4px solid #1d4ed8; padding: 12px; margin-bottom: 16px; }
-  .current-value { background: #f3f4f6; padding: 8px; border-radius: 4px; margin-top: 4px; font-size: 14px; }
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  label {
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+
+  input,
+  select,
+  textarea {
+    padding: 8px;
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+
+  textarea {
+    min-height: 100px;
+  }
+
+  button {
+    padding: 10px 16px;
+    background: #1d4ed8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  button:hover {
+    background: #1e40af;
+  }
+
+  .error {
+    color: #dc2626;
+    padding: 12px;
+    background: #fee2e2;
+    border-radius: 4px;
+    margin-bottom: 16px;
+  }
+
+  .info {
+    background: #dbeafe;
+    border-left: 4px solid #1d4ed8;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+
+  .current-value {
+    background: #f3f4f6;
+    padding: 8px;
+    border-radius: 4px;
+    margin-top: 4px;
+    font-size: 14px;
+  }
 </style>
 {% endblock %}
 {% block content %}
 <div class="card">
-  <h2>✏️ Demander une modification d'inspection</h2>
+  <h2><i class="bi bi-pencil-square"></i> Demander une modification d'inspection</h2>
   <p class="muted">Patrimoine: <strong>{{ inspection.id_patrimoine.nom_fr }}</strong></p>
 
   <div class="info">
-    <strong>ℹ️ Processus de modification:</strong>
+    <strong><i class="bi bi-info-circle"></i> Processus de modification:</strong>
     <ol style="margin: 8px 0; padding-left: 20px;">
       <li>Vous proposez les modifications ci-dessous</li>
       <li>La demande est envoyée à l'administrateur pour examen</li>
@@ -30,7 +86,7 @@
   </div>
 
   {% if error %}
-  <div class="error">❌ {{ error }}</div>
+  <div class="error"><i class="bi bi-x-circle"></i> {{ error }}</div>
   {% endif %}
 
   <form method="post">
@@ -39,7 +95,8 @@
     <div class="form-group">
       <label for="date_inspection">Date d'inspection *</label>
       <div class="current-value">Valeur actuelle: {{ inspection.date_inspection|date:"Y-m-d" }}</div>
-      <input type="date" id="date_inspection" name="date_inspection" value="{{ inspection.date_inspection|date:'Y-m-d' }}" required>
+      <input type="date" id="date_inspection" name="date_inspection"
+        value="{{ inspection.date_inspection|date:'Y-m-d' }}" required>
     </div>
 
     <div class="form-group">
@@ -47,7 +104,7 @@
       <div class="current-value">Valeur actuelle: {{ inspection.get_etat_display }}</div>
       <select id="etat" name="etat" required>
         {% for value, label in inspection_etat %}
-        <option value="{{ value }}" {% if inspection.etat == value %}selected{% endif %}>{{ label }}</option>
+        <option value="{{ value }}" {% if inspection.etat==value %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
     </div>
@@ -59,8 +116,9 @@
     </div>
 
     <div style="display: flex; gap: 10px;">
-      <button type="submit">📤 Soumettre la demande</button>
-      <a href="{% url 'inspection-detail' inspection.id_inspection %}" style="padding: 10px 16px; background: #6b7280; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Annuler</a>
+      <button type="submit"><i class="bi bi-send"></i> Soumettre la demande</button>
+      <a href="{% url 'inspection-detail' inspection.id_inspection %}"
+        style="padding: 10px 16px; background: #6b7280; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Annuler</a>
     </div>
   </form>
 </div>

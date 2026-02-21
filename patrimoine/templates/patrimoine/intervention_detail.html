@@ -2,7 +2,7 @@
 {% block title %}Intervention - {{ intervention.nom_projet }}{% endblock %}
 {% block content %}
 <div class="card">
-    <h2>🔧 {{ intervention.nom_projet }}</h2>
+    <h2><i class="bi bi-tools"></i> {{ intervention.nom_projet }}</h2>
     <p class="muted">Patrimoine: <strong>{{ intervention.id_patrimoine.nom_fr }}</strong></p>
 
     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 16px;">

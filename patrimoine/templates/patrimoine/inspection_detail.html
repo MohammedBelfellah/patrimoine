@@ -2,7 +2,7 @@
 {% block title %}Inspection - {{ inspection.id_patrimoine.nom_fr }}{% endblock %}
 {% block content %}
 <div class="card">
-  <h2>📋 Inspection: {{ inspection.id_patrimoine.nom_fr }}</h2>
+  <h2><i class="bi bi-clipboard-check"></i> Inspection: {{ inspection.id_patrimoine.nom_fr }}</h2>
   <p class="muted"><small>{{ inspection.id_patrimoine.full_location }}</small></p>
 
   <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
@@ -13,7 +13,15 @@
       </div>
       <div>
         <strong>État:</strong>
-        <p><span style="padding: 4px 12px; background: {% if inspection.etat == 'BON' %}#d1fae5{% elif inspection.etat == 'MOYEN' %}#fef3c7{% else %}#fee2e2{% endif %}; border-radius: 4px; font-weight: bold;">{{ inspection.get_etat_display }}</span></p>
+        <p>
+          {% if inspection.etat == 'BON' %}
+          <span style="padding: 4px 12px; background: #d1fae5; border-radius: 4px; font-weight: bold;">{{ inspection.get_etat_display }}</span>
+          {% elif inspection.etat == 'MOYEN' %}
+          <span style="padding: 4px 12px; background: #fef3c7; border-radius: 4px; font-weight: bold;">{{ inspection.get_etat_display }}</span>
+          {% else %}
+          <span style="padding: 4px 12px; background: #fee2e2; border-radius: 4px; font-weight: bold;">{{ inspection.get_etat_display }}</span>
+          {% endif %}
+        </p>
       </div>
       <div>
         <strong>Inspecteur:</strong>
@@ -24,7 +32,7 @@
         <p>{{ inspection.updated_at|date:"d/m/Y H:i" }}</p>
       </div>
     </div>
-    
+
     {% if inspection.observations %}
     <div style="margin-top: 12px;">
       <strong>Observations:</strong>
@@ -35,7 +43,8 @@
 
   <div style="margin-bottom: 16px; display: flex; gap: 10px;">
     {% if can_request_modification %}
-    <a href="{% url 'inspection-request-edit' inspection.id_inspection %}" class="btn btn-warning">✏️ Demander une modification</a>
+    <a href="{% url 'inspection-request-edit' inspection.id_inspection %}" class="btn btn-warning"><i
+        class="bi bi-pencil-square"></i> Demander une modification</a>
     {% endif %}
     <a href="{% url 'inspection-list' %}" class="btn btn-secondary">Retour</a>
   </div>
@@ -45,24 +54,57 @@
   <div style="margin-top: 24px;">
     <h3>Historique des demandes de modification</h3>
     <style>
-      .modification-item { border-left: 4px solid; border-radius: 6px; margin-bottom: 12px; }
-      .modification-header { padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
-      .modification-header:hover { opacity: 0.85; }
-      .modification-header-info { font-weight: 600; font-size: 0.95rem; }
-      .modification-content { padding: 0 16px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
-      .modification-content.show { max-height: 600px; padding: 12px 16px; }
+      .modification-item {
+        border-left: 4px solid;
+        border-radius: 6px;
+        margin-bottom: 12px;
+      }
+
+      .modification-header {
+        padding: 12px 16px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        user-select: none;
+      }
+
+      .modification-header:hover {
+        opacity: 0.85;
+      }
+
+      .modification-header-info {
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+
+      .modification-content {
+        padding: 0 16px;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+      }
+
+      .modification-content.show {
+        max-height: 600px;
+        padding: 12px 16px;
+      }
     </style>
 
     {% for req in modification_requests %}
-    <div class="modification-item" style="background: {% if req.status == 'PENDING' %}#fef9c3{% elif req.status == 'APPROVED' %}#d1fae5{% else %}#fee2e2{% endif %}; border-left-color: {% if req.status == 'PENDING' %}#ca8a04{% elif req.status == 'APPROVED' %}#059669{% else %}#dc2626{% endif %};">
-      
+    <div class="modification-item"
+      style="background: {% if req.status == 'PENDING' %}#fef9c3{% elif req.status == 'APPROVED' %}#d1fae5{% else %}#fee2e2{% endif %}; border-left-color: {% if req.status == 'PENDING' %}#ca8a04{% elif req.status == 'APPROVED' %}#059669{% else %}#dc2626{% endif %};">
+
       <!-- Collapsible Header -->
-      <div class="modification-header" onclick="this.nextElementSibling.classList.toggle('show'); this.querySelector('.toggle-icon').textContent = this.nextElementSibling.classList.contains('show') ? '▼' : '▶';">
+      <div class="modification-header"
+        onclick="this.nextElementSibling.classList.toggle('show'); this.querySelector('.toggle-icon').textContent = this.nextElementSibling.classList.contains('show') ? '▼' : '▶';">
         <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
           <span class="toggle-icon" style="color: #666; font-size: 0.8rem;">▶</span>
           <div>
-            <div class="modification-header-info" style="color: {% if req.status == 'PENDING' %}#854d0e{% elif req.status == 'APPROVED' %}#065f46{% else %}#991b1b{% endif %};">
-              {% if req.status == 'PENDING' %}⏳{% elif req.status == 'APPROVED' %}✅{% else %}❌{% endif %}
+            <div class="modification-header-info"
+              style="color: {% if req.status == 'PENDING' %}#854d0e{% elif req.status == 'APPROVED' %}#065f46{% else %}#991b1b{% endif %};">
+              {% if req.status == 'PENDING' %}<i class="bi bi-hourglass-split"></i>{% elif req.status == 'APPROVED' %}<i
+                class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
               {{ req.get_status_display }}
             </div>
             <div style="font-size: 0.85rem; color: #666; margin-top: 2px;">
@@ -77,7 +119,8 @@
       <div class="modification-content">
         <!-- Proposed Changes -->
         <div style="background: white; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
-          <strong style="color: #1f2937; font-size: 0.95rem; display: block; margin-bottom: 8px;">Changements proposés:</strong>
+          <strong style="color: #1f2937; font-size: 0.95rem; display: block; margin-bottom: 8px;">Changements
+            proposés:</strong>
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; font-size: 0.9rem;">
             <div>
               <strong style="color: #4b5563;">Date:</strong>
@@ -98,22 +141,31 @@
 
         <!-- Admin Actions (Approval/Rejection) -->
         {% if req.status == 'PENDING' and is_admin %}
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: white; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
-          
+        <div
+          style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: white; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+
           <!-- Approve Form -->
-          <form method="post" action="{% url 'inspection-request-approve' req.id_request %}" style="display: flex; flex-direction: column; gap: 6px;">
+          <form method="post" action="{% url 'inspection-request-approve' req.id_request %}"
+            style="display: flex; flex-direction: column; gap: 6px;">
             {% csrf_token %}
             <label style="font-size: 0.85rem; font-weight: 600; color: #1f2937;">Note (optionnel):</label>
-            <input type="text" name="admin_note" placeholder="Note..." style="padding: 6px 8px; border: 1px solid #d8dee6; border-radius: 4px; font-size: 0.85rem;">
-            <button type="submit" style="padding: 8px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem;" onclick="return confirm('Approuver?');">✅ Approuver</button>
+            <input type="text" name="admin_note" placeholder="Note..."
+              style="padding: 6px 8px; border: 1px solid #d8dee6; border-radius: 4px; font-size: 0.85rem;">
+            <button type="submit"
+              style="padding: 8px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem;"
+              onclick="return confirm('Approuver?');"><i class="bi bi-check-circle"></i> Approuver</button>
           </form>
 
           <!-- Reject Form -->
-          <form method="post" action="{% url 'inspection-request-reject' req.id_request %}" style="display: flex; flex-direction: column; gap: 6px;">
+          <form method="post" action="{% url 'inspection-request-reject' req.id_request %}"
+            style="display: flex; flex-direction: column; gap: 6px;">
             {% csrf_token %}
             <label style="font-size: 0.85rem; font-weight: 600; color: #1f2937;">Raison:</label>
-            <input type="text" name="admin_note" placeholder="Raison..." style="padding: 6px 8px; border: 1px solid #d8dee6; border-radius: 4px; font-size: 0.85rem;">
-            <button type="submit" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem;" onclick="return confirm('Rejeter?');">🗑️ Rejeter</button>
+            <input type="text" name="admin_note" placeholder="Raison..."
+              style="padding: 6px 8px; border: 1px solid #d8dee6; border-radius: 4px; font-size: 0.85rem;">
+            <button type="submit"
+              style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem;"
+              onclick="return confirm('Rejeter?');"><i class="bi bi-trash"></i> Rejeter</button>
           </form>
         </div>
         {% endif %}
@@ -135,11 +187,35 @@
 </div>
 
 <style>
-  .btn { display: inline-block; padding: 8px 16px; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; color: white; }
-  .btn-warning { background: #f59e0b; }
-  .btn-success { background: #10b981; }
-  .btn-danger { background: #ef4444; }
-  .btn-secondary { background: #6b7280; }
-  .btn:hover { opacity: 0.9; }
+  .btn {
+    display: inline-block;
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    color: white;
+  }
+
+  .btn-warning {
+    background: #f59e0b;
+  }
+
+  .btn-success {
+    background: #10b981;
+  }
+
+  .btn-danger {
+    background: #ef4444;
+  }
+
+  .btn-secondary {
+    background: #6b7280;
+  }
+
+  .btn:hover {
+    opacity: 0.9;
+  }
 </style>
 {% endblock %}

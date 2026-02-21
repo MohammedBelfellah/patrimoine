@@ -2,24 +2,116 @@
 {% block title %}Gestion des utilisateurs{% endblock %}
 {% block head_extra %}
 <style>
-  .page-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .page-title h2 { margin: 0; font-size: 2.2rem; font-weight: 700; color: #1f2937; }
-  .filter-wrap { background: #fff; border-radius: 12px; box-shadow: 0 4px 14px rgba(2,6,23,.08); overflow: hidden; margin-bottom: 14px; }
-  .filter-head { background: linear-gradient(90deg, #1f6bdd, #2570ea); color: #fff; font-size: 1.05rem; font-weight: 700; padding: 10px 16px; }
-  .filter-body { padding: 14px 16px; }
-  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; background: #fff; }
-  thead th { background: #18202b; color: #fff; font-size: 1.03rem; font-weight: 700; border: none; }
-  th, td { padding: 12px; text-align: left; border-bottom: 1px solid #d8dee6; font-size: .98rem; }
-  tr:hover { background: #f6f8fb; }
-  .actions { text-align: center; white-space: nowrap; }
-  .role-badge { background: #dbeafe; padding: 4px 8px; border-radius: 4px; margin-right: 4px; display: inline-block; }
-  .results-count { color: #4b5563; margin: 8px 0 12px; font-size: .98rem; }
-  .alert-inline { padding: 10px; border-radius: 6px; margin-bottom: 12px; }
-  .alert-error { color: #dc2626; background: #fee2e2; }
-  .alert-success { color: #065f46; background: #d1fae5; }
-  @media (max-width: 1200px) { .page-title h2 { font-size: 1.7rem; } }
+    .page-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+
+    .page-title h2 {
+        margin: 0;
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    .filter-wrap {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 14px rgba(2, 6, 23, .08);
+        overflow: hidden;
+        margin-bottom: 14px;
+    }
+
+    .filter-head {
+        background: linear-gradient(90deg, #1f6bdd, #2570ea);
+        color: #fff;
+        font-size: 1.05rem;
+        font-weight: 700;
+        padding: 10px 16px;
+    }
+
+    .filter-body {
+        padding: 14px 16px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+    }
+
+    .table-wrap {
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+    }
+
+    thead th {
+        background: #18202b;
+        color: #fff;
+        font-size: 1.03rem;
+        font-weight: 700;
+        border: none;
+    }
+
+    th,
+    td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #d8dee6;
+        font-size: .98rem;
+    }
+
+    tr:hover {
+        background: #f6f8fb;
+    }
+
+    .actions {
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .role-badge {
+        background: #dbeafe;
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-right: 4px;
+        display: inline-block;
+    }
+
+    .results-count {
+        color: #4b5563;
+        margin: 8px 0 12px;
+        font-size: .98rem;
+    }
+
+    .alert-inline {
+        padding: 10px;
+        border-radius: 6px;
+        margin-bottom: 12px;
+    }
+
+    .alert-error {
+        color: #dc2626;
+        background: #fee2e2;
+    }
+
+    .alert-success {
+        color: #065f46;
+        background: #d1fae5;
+    }
+
+    @media (max-width: 1200px) {
+        .page-title h2 {
+            font-size: 1.7rem;
+        }
+    }
 </style>
 {% endblock %}
 {% block content %}
@@ -32,94 +124,96 @@
     <div class="filter-wrap">
         <div class="filter-head"><i class="bi bi-person-plus"></i> Ajouter un utilisateur</div>
         <div class="filter-body">
-        {% if error %}
-        <div class="alert-inline alert-error">
-            ❌ {{ error }}
-        </div>
-        {% endif %}
-        {% if success %}
-        <div class="alert-inline alert-success">
-            ✅ {{ success }}
-        </div>
-        {% endif %}
-        <form method="post" action="{% url 'user-management' %}" class="form-grid">
-            {% csrf_token %}
-            <div>
-                <label for="email">Email *</label>
-                <input type="email" id="email" name="email" required />
+            {% if error %}
+            <div class="alert-inline alert-error">
+                <i class="bi bi-x-circle"></i> {{ error }}
             </div>
-            <div>
-                <label for="username">Nom d'utilisateur *</label>
-                <input type="text" id="username" name="username" required />
+            {% endif %}
+            {% if success %}
+            <div class="alert-inline alert-success">
+                <i class="bi bi-check-circle"></i> {{ success }}
             </div>
-            <div>
-                <label for="password">Mot de passe *</label>
-                <input type="password" id="password" name="password" required />
-            </div>
-            <div>
-                <label for="role">Rôle *</label>
-                <select id="role" name="role" required>
-                    <option value="ADMIN">ADMIN</option>
-                    <option value="INSPECTEUR">INSPECTEUR</option>
-                    <option value="PUBLIC" selected>PUBLIC</option>
-                </select>
-            </div>
-            <div style="display: flex; align-items: end;">
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Créer</button>
-            </div>
-        </form>
+            {% endif %}
+            <form method="post" action="{% url 'user-management' %}" class="form-grid">
+                {% csrf_token %}
+                <div>
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" name="email" required />
+                </div>
+                <div>
+                    <label for="username">Nom d'utilisateur *</label>
+                    <input type="text" id="username" name="username" required />
+                </div>
+                <div>
+                    <label for="password">Mot de passe *</label>
+                    <input type="password" id="password" name="password" required />
+                </div>
+                <div>
+                    <label for="role">Rôle *</label>
+                    <select id="role" name="role" required>
+                        <option value="ADMIN">ADMIN</option>
+                        <option value="INSPECTEUR">INSPECTEUR</option>
+                        <option value="PUBLIC" selected>PUBLIC</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: end;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Créer</button>
+                </div>
+            </form>
         </div>
     </div>
 
     {% if users %}
-    <p class="results-count"><i class="bi bi-square-fill" style="font-size:.65rem;"></i> {{ users|length }} utilisateur(s)</p>
+    <p class="results-count"><i class="bi bi-square-fill" style="font-size:.65rem;"></i> {{ users|length }}
+        utilisateur(s)</p>
     <div class="table-wrap">
-    <table>
-        <thead>
-            <tr>
-                <th>Email</th>
-                <th>Groupes</th>
-                <th class="actions">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for user in users %}
-            <tr>
-                <td>
-                    <strong>{{ user.email }}</strong>
-                    {% if user.is_superuser %}
-                    <br><span style="color: #d97706; font-size: 0.85em;">⭐ Superadmin</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if user.group_names %}
-                    {% for group in user.group_names %}<span class="role-badge">{{ group }}</span>{% endfor %}
-                    {% else %}
-                    <span class="muted">Aucun rôle</span>
-                    {% endif %}
-                </td>
-                <td class="actions">
-                    <form method="post" action="{% url 'toggle-user-group' user_id=user.id group_name='ADMIN' %}"
-                        style="display: inline-block; margin-right: 8px;">
-                        {% csrf_token %}
-                        <button type="submit"
-                            class="btn btn-sm {% if user.is_admin %}btn-danger{% else %}btn-success{% endif %}">
-                            {% if user.is_admin %}Retirer ADMIN{% else %}Ajouter ADMIN{% endif %}
-                        </button>
-                    </form>
-                    <form method="post" action="{% url 'toggle-user-group' user_id=user.id group_name='INSPECTEUR' %}"
-                        style="display: inline-block;">
-                        {% csrf_token %}
-                        <button type="submit"
-                            class="btn btn-sm {% if user.is_inspecteur %}btn-danger{% else %}btn-success{% endif %}">
-                            {% if user.is_inspecteur %}Retirer INSPECTEUR{% else %}Ajouter INSPECTEUR{% endif %}
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Groupes</th>
+                    <th class="actions">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>
+                        <strong>{{ user.email }}</strong>
+                        {% if user.is_superuser %}
+                        <br><span style="color: #d97706; font-size: 0.85em;">⭐ Superadmin</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.group_names %}
+                        {% for group in user.group_names %}<span class="role-badge">{{ group }}</span>{% endfor %}
+                        {% else %}
+                        <span class="muted">Aucun rôle</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions">
+                        <form method="post" action="{% url 'toggle-user-group' user_id=user.id group_name='ADMIN' %}"
+                            style="display: inline-block; margin-right: 8px;">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="btn btn-sm {% if user.is_admin %}btn-danger{% else %}btn-success{% endif %}">
+                                {% if user.is_admin %}Retirer ADMIN{% else %}Ajouter ADMIN{% endif %}
+                            </button>
+                        </form>
+                        <form method="post"
+                            action="{% url 'toggle-user-group' user_id=user.id group_name='INSPECTEUR' %}"
+                            style="display: inline-block;">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="btn btn-sm {% if user.is_inspecteur %}btn-danger{% else %}btn-success{% endif %}">
+                                {% if user.is_inspecteur %}Retirer INSPECTEUR{% else %}Ajouter INSPECTEUR{% endif %}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
     {% else %}
     <p class="muted">Aucun utilisateur trouvé.</p>

@@ -1,133 +1,254 @@
 {% extends "core/base.html" %}
 {% block title %}Carte publique{% endblock %}
 {% block head_extra %}
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-  crossorigin=""
-/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 <style>
   .public-shell {
     display: grid;
     grid-template-columns: minmax(240px, 300px) 1fr;
     gap: 12px;
-    max-height: calc(100vh - 80px);
   }
+
   #map {
     height: 75vh;
     border-radius: 16px;
     box-shadow: var(--shadow);
     border: 1px solid rgba(148, 163, 184, 0.35);
   }
+
   .sidebar {
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    max-height: 75vh;
-    overflow-y: auto;
-  }
-  .tool-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
+
+  .sidebar-module {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    overflow: hidden;
+  }
+
+  .sidebar-module summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 12px 14px;
+    font-size: .96rem;
+    font-weight: 600;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .sidebar-module summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .sidebar-module summary::after {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid #dc2626;
+    border-bottom: 2px solid #dc2626;
+    transform: rotate(45deg);
+    transition: transform .2s ease;
+    margin-left: 10px;
+    flex-shrink: 0;
+  }
+
+  .sidebar-module[open] summary::after {
+    transform: rotate(-135deg);
+    margin-top: 6px;
+  }
+
+  .module-body {
+    padding: 0 12px 12px;
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+    font-size: .88rem;
+  }
+
+  .sidebar-module[open] .module-body {
+    max-height: 66vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  #moduleList[open] .module-body {
+    max-height: 72vh;
+  }
+
+  #moduleDetail[open] .module-body {
+    max-height: 62vh;
+  }
+
+  .module-body label {
+    display: block;
+    margin: 8px 0 5px;
+    font-weight: 600;
+    color: #334155;
+    font-size: .86rem;
+  }
+
+  .module-body input,
+  .module-body select {
+    width: 100%;
+    font-size: .86rem;
+    padding: 8px 10px;
+    min-height: 38px;
+  }
+
+  .module-body .btn {
+    font-size: .84rem;
+    padding: 6px 10px;
+    min-height: 34px;
+  }
+
+  .tool-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .gis-tools #exportPdfBtn {
+    grid-column: 1 / -1;
+  }
+
   .list-panel {
-    max-height: 34vh;
-    overflow: auto;
+    overflow: visible;
     border: 1px solid rgba(148, 163, 184, 0.25);
     border-radius: 12px;
-    padding: 10px;
+    padding: 8px;
     background: #fff;
   }
+
   .list-item {
-    padding: 8px 10px;
+    padding: 7px 9px;
+    font-size: .86rem;
     border-radius: 10px;
     border: 1px solid transparent;
     margin-bottom: 6px;
     cursor: pointer;
   }
-  .list-item:hover { background: #f8fafc; border-color: rgba(148, 163, 184, 0.3); }
-  .list-item.active { background: #e0f2fe; border-color: #38bdf8; }
+
+  .list-item:hover {
+    background: #f8fafc;
+    border-color: rgba(148, 163, 184, 0.3);
+  }
+
+  .list-item.active {
+    background: #e0f2fe;
+    border-color: #38bdf8;
+  }
+
   .detail-card {
     background: #fff;
     border-radius: 12px;
-    padding: 12px;
+    padding: 10px;
     border: 1px solid rgba(148, 163, 184, 0.25);
   }
+
+  .gis-status {
+    margin-top: 8px;
+    font-size: .8rem;
+    color: #4b5563;
+  }
+
   @media (max-width: 992px) {
-    .public-shell { grid-template-columns: 1fr; }
-    #map { height: 65vh; }
+    .public-shell {
+      grid-template-columns: 1fr;
+    }
+
+    #map {
+      height: 65vh;
+    }
+
+    .gis-tools #exportPdfBtn {
+      grid-column: 1;
+    }
+
+    .sidebar-module[open] .module-body,
+    #moduleList[open] .module-body,
+    #moduleDetail[open] .module-body {
+      max-height: 72vh;
+    }
   }
 </style>
 {% endblock %}
 {% block content %}
 <div class="public-shell">
   <div class="sidebar">
-    <div class="app-card">
-      <h2 class="mb-1">Carte publique</h2>
-      <p class="muted mb-0">Explorez les patrimoines par type, statut et localisation.</p>
-    </div>
+    <details class="sidebar-module">
+      <summary>Recherche & filtres</summary>
+      <div class="module-body">
+        <label for="searchInput">Recherche</label>
+        <input id="searchInput" type="text" placeholder="Nom du patrimoine..." />
 
-    <div class="app-card">
-      <h5 class="mb-3">Filtres</h5>
-      <label for="searchInput">Recherche</label>
-      <input id="searchInput" type="text" placeholder="Nom du patrimoine..." />
+        <label for="typeFilter">Type</label>
+        <select id="typeFilter">
+          <option value="">Tous les types</option>
+          {% for code, label in patrimoine_types %}
+          <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
 
-      <label for="typeFilter">Type</label>
-      <select id="typeFilter">
-        <option value="">Tous les types</option>
-        {% for code, label in patrimoine_types %}
-        <option value="{{ code }}">{{ label }}</option>
-        {% endfor %}
-      </select>
+        <label for="statusFilter">Statut</label>
+        <select id="statusFilter">
+          <option value="">Tous les statuts</option>
+          {% for code, label in patrimoine_statuts %}
+          <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
 
-      <label for="statusFilter">Statut</label>
-      <select id="statusFilter">
-        <option value="">Tous les statuts</option>
-        {% for code, label in patrimoine_statuts %}
-        <option value="{{ code }}">{{ label }}</option>
-        {% endfor %}
-      </select>
+        <label for="regionFilter">Région</label>
+        <select id="regionFilter">
+          <option value="">Toutes les régions</option>
+          {% for region in regions %}
+          <option value="{{ region.id_region }}">{{ region.nom_region }}</option>
+          {% endfor %}
+        </select>
 
-      <label for="regionFilter">Région</label>
-      <select id="regionFilter">
-        <option value="">Toutes les régions</option>
-        {% for region in regions %}
-        <option value="{{ region.id_region }}">{{ region.nom_region }}</option>
-        {% endfor %}
-      </select>
-
-      <div class="tool-grid">
-        <button type="button" class="btn btn-ink" id="applyFilters">Appliquer</button>
-        <button type="button" class="btn btn-outline-secondary" id="resetFilters">Reset</button>
+        <div class="tool-grid">
+          <button type="button" class="btn btn-ink" id="applyFilters">Appliquer</button>
+        </div>
       </div>
-    </div>
+    </details>
 
-    <div class="app-card">
-      <h5 class="mb-2">Outils GIS</h5>
-      <div class="tool-grid">
-        <button type="button" class="btn btn-copper" id="locateBtn">Ma position</button>
-        <button type="button" class="btn btn-outline-primary" id="printBtn">Imprimer</button>
+    <details class="sidebar-module">
+      <summary>Outils GIS</summary>
+      <div class="module-body">
+        <div class="tool-grid gis-tools">
+          <button type="button" class="btn btn-copper" id="locateBtn">Ma position</button>
+          <button type="button" class="btn btn-outline-secondary" id="clearDrawBtn">Effacer dessin</button>
+          <button type="button" class="btn btn-outline-primary" id="exportPdfBtn">Exporter PDF</button>
+        </div>
+        <div class="gis-status" id="gisStatus">Dessinez une zone (rectangle/polygone) pour sélectionner les patrimoines.
+        </div>
+        <div class="detail-card mt-3">
+          <div class="small muted">Coordonnées sélectionnées</div>
+          <div id="coordText" class="fw-semibold">Cliquer sur la carte</div>
+          <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="copyCoords">Copier</button>
+        </div>
       </div>
-      <div class="detail-card mt-3">
-        <div class="small muted">Coordonnées sélectionnées</div>
-        <div id="coordText" class="fw-semibold">Cliquer sur la carte</div>
-        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="copyCoords">Copier</button>
-      </div>
-    </div>
+    </details>
 
-    <div class="app-card">
-      <h5 class="mb-2">Patrimoines visibles</h5>
-      <div class="list-panel" id="patrimoineList"></div>
-    </div>
-
-    <div class="app-card">
-      <h5 class="mb-2">Détails</h5>
-      <div class="detail-card" id="detailCard">
-        <div class="muted">Sélectionnez un patrimoine sur la carte ou dans la liste.</div>
+    <details class="sidebar-module" id="moduleList">
+      <summary>Patrimoines visibles</summary>
+      <div class="module-body">
+        <div class="list-panel" id="patrimoineList"></div>
       </div>
-    </div>
+    </details>
+
+    <details class="sidebar-module" id="moduleDetail">
+      <summary>Détails sélection</summary>
+      <div class="module-body">
+        <div class="detail-card" id="detailCard">
+          <div class="muted">Sélectionnez un patrimoine sur la carte ou dans la liste.</div>
+        </div>
+      </div>
+    </details>
   </div>
 
   <div class="app-card">
@@ -137,18 +258,22 @@
         <p class="muted mb-0">Zoom, sélection, recherche et filtrage en direct.</p>
       </div>
       <div class="d-flex gap-2">
-        <span class="badge text-bg-light" style="border: 1px solid rgba(15, 118, 110, 0.3); color: #0f766e;">Historique</span>
-        <span class="badge text-bg-light" style="border: 1px solid rgba(194, 65, 12, 0.3); color: #c2410c;">Naturel</span>
+        <span class="badge text-bg-light"
+          style="border: 1px solid rgba(15, 118, 110, 0.3); color: #0f766e;">Historique</span>
+        <span class="badge text-bg-light"
+          style="border: 1px solid rgba(194, 65, 12, 0.3); color: #c2410c;">Naturel</span>
       </div>
     </div>
     <div id="map"></div>
   </div>
 </div>
-<script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-  crossorigin=""
-></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet-image/leaflet-image.js"></script>
 <script>
   const map = L.map('map', { zoomControl: true }).setView([31.7917, -7.0926], 6);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -157,21 +282,56 @@
   }).addTo(map);
   L.control.scale({ imperial: false }).addTo(map);
 
-  const patrimoines = {{ patrimoines_json|safe }};
+  const patrimoines = {{ patrimoines_json| safe }};
   const listEl = document.getElementById('patrimoineList');
   const detailCard = document.getElementById('detailCard');
+  const detailModule = document.getElementById('moduleDetail');
   const coordText = document.getElementById('coordText');
+  const gisStatus = document.getElementById('gisStatus');
+  const sidebarModules = document.querySelectorAll('.sidebar-module');
   const layerGroup = L.geoJSON(null, { style: featureStyle }).addTo(map);
   const layerIndex = new Map();
+  const drawnItems = new L.FeatureGroup().addTo(map);
   let selectedId = null;
   let lastCoords = null;
+  let currentFiltered = [...patrimoines];
+  let drawFiltered = null;
+
+  const drawControl = new L.Control.Draw({
+    edit: {
+      featureGroup: drawnItems,
+      remove: true,
+    },
+    draw: {
+      marker: false,
+      circle: false,
+      circlemarker: false,
+      polyline: false,
+      polygon: { allowIntersection: false, showArea: true },
+      rectangle: true,
+    },
+  });
+  map.addControl(drawControl);
+
+  sidebarModules.forEach((module) => {
+    module.addEventListener('toggle', () => {
+      if (!module.open) {
+        return;
+      }
+      sidebarModules.forEach((otherModule) => {
+        if (otherModule !== module) {
+          otherModule.open = false;
+        }
+      });
+    });
+  });
 
   function featureStyle(feature) {
     const type = feature?.properties?.type || '';
     const color = type === 'HISTORIQUE' ? '#0ea5e9'
       : type === 'NATUREL' ? '#10b981'
-      : type === 'MONDIAL' ? '#f97316'
-      : '#64748b';
+        : type === 'MONDIAL' ? '#f97316'
+          : '#64748b';
     return { color, weight: 2, fillOpacity: 0.25 };
   }
 
@@ -240,13 +400,16 @@
 
     const p = patrimoines.find((item) => item.id === id);
     if (!p) { return; }
+    if (detailModule) {
+      detailModule.open = true;
+    }
     detailCard.innerHTML = `
       <div class="fw-semibold mb-1">${p.nom}</div>
       <div class="small muted">${p.full_location}</div>
       <div class="mt-2"><span class="badge text-bg-light">${p.type_label}</span> <span class="badge text-bg-light">${p.statut_label}</span></div>
       <div class="mt-2 small">Region: ${p.region_name || '-'}<br>Province: ${p.province_name || '-'}<br>Commune: ${p.commune_name || '-'}</div>
     `;
-    renderList(currentFiltered);
+    renderList(drawFiltered || currentFiltered);
   }
 
   function getFilters() {
@@ -267,6 +430,11 @@
       const matchesRegion = !region || String(p.region_id) === String(region);
       return matchesSearch && matchesType && matchesStatus && matchesRegion;
     });
+    if (drawnItems.getLayers().length > 0) {
+      applyDrawSelection(drawnItems.getLayers()[0].toGeoJSON().geometry);
+      return;
+    }
+    drawFiltered = null;
     buildFeatures(currentFiltered);
     renderList(currentFiltered);
     if (!currentFiltered.length) {
@@ -274,22 +442,53 @@
     }
   }
 
-  let currentFiltered = [...patrimoines];
+  function applyDrawSelection(drawnGeometry) {
+    drawFiltered = currentFiltered.filter((p) => {
+      if (!p.geom) { return false; }
+      const feature = { type: 'Feature', geometry: p.geom, properties: {} };
+      try {
+        return turf.booleanIntersects(feature, { type: 'Feature', geometry: drawnGeometry, properties: {} });
+      } catch (e) {
+        return false;
+      }
+    });
+
+    buildFeatures(drawFiltered);
+    renderList(drawFiltered);
+    gisStatus.textContent = `Zone GIS active: ${drawFiltered.length} patrimoine(s) sélectionné(s).`;
+    if (!drawFiltered.length) {
+      detailCard.innerHTML = '<div class="muted">Aucun patrimoine dans la zone dessinée.</div>';
+    }
+  }
+
   buildFeatures(currentFiltered);
   renderList(currentFiltered);
 
   document.getElementById('applyFilters').addEventListener('click', applyFilters);
-  document.getElementById('resetFilters').addEventListener('click', () => {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('typeFilter').value = '';
-    document.getElementById('statusFilter').value = '';
-    document.getElementById('regionFilter').value = '';
-    applyFilters();
-  });
   document.getElementById('searchInput').addEventListener('input', () => {
     if (document.getElementById('searchInput').value.length >= 2 || document.getElementById('searchInput').value.length === 0) {
       applyFilters();
     }
+  });
+
+  map.on(L.Draw.Event.CREATED, (event) => {
+    drawnItems.clearLayers();
+    drawnItems.addLayer(event.layer);
+    applyDrawSelection(event.layer.toGeoJSON().geometry);
+  });
+
+  map.on(L.Draw.Event.EDITED, () => {
+    const firstLayer = drawnItems.getLayers()[0];
+    if (firstLayer) {
+      applyDrawSelection(firstLayer.toGeoJSON().geometry);
+    }
+  });
+
+  map.on(L.Draw.Event.DELETED, () => {
+    drawFiltered = null;
+    gisStatus.textContent = 'Dessinez une zone (rectangle/polygone) pour sélectionner les patrimoines.';
+    buildFeatures(currentFiltered);
+    renderList(currentFiltered);
   });
 
   map.on('click', (event) => {
@@ -311,8 +510,109 @@
     map.locate({ setView: true, maxZoom: 14 });
   });
 
-  document.getElementById('printBtn').addEventListener('click', () => {
-    window.print();
+  document.getElementById('clearDrawBtn').addEventListener('click', () => {
+    drawnItems.clearLayers();
+    drawFiltered = null;
+    gisStatus.textContent = 'Dessinez une zone (rectangle/polygone) pour sélectionner les patrimoines.';
+    buildFeatures(currentFiltered);
+    renderList(currentFiltered);
+  });
+
+  function createLogoDataUrl() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 240;
+    canvas.height = 70;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0f766e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText('PC', 12, 44);
+    ctx.font = '16px Arial';
+    ctx.fillText('Patrimoine Culturel', 56, 44);
+    return canvas.toDataURL('image/png');
+  }
+
+  function visiblePatrimoines() {
+    return drawFiltered || currentFiltered;
+  }
+
+  async function captureMapImage() {
+    return new Promise((resolve, reject) => {
+      if (typeof leafletImage !== 'function') {
+        reject(new Error('leaflet-image not available'));
+        return;
+      }
+      leafletImage(map, (err, canvas) => {
+        if (err || !canvas) {
+          reject(err || new Error('leaflet-image failed'));
+          return;
+        }
+        resolve(canvas.toDataURL('image/png'));
+      });
+    });
+  }
+
+  async function exportMapToPdf() {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const now = new Date();
+    const visible = visiblePatrimoines();
+    const selected = patrimoines.find((p) => p.id === selectedId) || null;
+
+    map.invalidateSize();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    let mapImage = null;
+    try {
+      mapImage = await captureMapImage();
+    } catch (e) {
+      const mapCanvas = await html2canvas(document.getElementById('map'), {
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        scale: 2,
+      });
+      mapImage = mapCanvas.toDataURL('image/png');
+    }
+    const logo = createLogoDataUrl();
+
+    pdf.setFillColor(15, 118, 110);
+    pdf.rect(0, 0, 210, 24, 'F');
+    pdf.addImage(logo, 'PNG', 10, 5, 60, 14);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(12);
+    pdf.text('Rapport cartographique personnalisé', 140, 14, { align: 'center' });
+
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(11);
+    pdf.text(`Date: ${now.toLocaleString('fr-FR')}`, 10, 32);
+    pdf.text(`Utilisateur: {% if request.user.is_authenticated %}{{ request.user.get_full_name|default:request.user.username }}{% else %}Public{% endif %}`, 10, 38);
+    pdf.text(`Patrimoines visibles: ${visible.length}`, 10, 44);
+    pdf.text(`Patrimoine sélectionné: ${selected ? selected.nom : 'Aucun'}`, 10, 50);
+
+    const locationText = selected ? selected.full_location : '-';
+    const wrappedLocation = pdf.splitTextToSize(`Localisation: ${locationText}`, 190);
+    pdf.text(wrappedLocation, 10, 56);
+
+    pdf.addImage(mapImage, 'PNG', 10, 70, 190, 115);
+
+    const yFooter = 193;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.line(10, yFooter, 200, yFooter);
+    pdf.setFontSize(9);
+    pdf.setTextColor(75, 85, 99);
+    pdf.text('Métadonnées: fond OSM, projection WGS84 (EPSG:4326), export GIS personnalisé.', 10, 199);
+    pdf.text('Contexte: filtres + sélection cartographique + zone dessinée (si active).', 10, 204);
+
+    pdf.save(`rapport_carte_patrimoine_${now.toISOString().slice(0, 10)}.pdf`);
+  }
+
+  document.getElementById('exportPdfBtn').addEventListener('click', async () => {
+    try {
+      await exportMapToPdf();
+    } catch (e) {
+      gisStatus.textContent = 'Erreur export PDF. Réessayez après chargement complet de la carte.';
+    }
   });
 </script>
 {% endblock %}

@@ -1,0 +1,111 @@
+{% extends "core/base.html" %}
+{% block title %}Modifier utilisateur{% endblock %}
+{% block head_extra %}
+<style>
+  .edit-wrap {
+    max-width: 780px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-group.full {
+    grid-column: 1 / -1;
+  }
+
+  .password-inline {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .password-inline input {
+    flex: 1;
+  }
+
+  .hint {
+    color: #4b5563;
+    font-size: .9rem;
+    margin-top: 4px;
+  }
+
+  .actions-row {
+    margin-top: 16px;
+    display: flex;
+    gap: 10px;
+  }
+
+  @media (max-width: 900px) {
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card edit-wrap">
+  <h2><i class="bi bi-pencil-square"></i> Modifier utilisateur</h2>
+  <p class="muted">Modifiez les informations de <strong>{{ target_user.username }}</strong>.</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="username">Nom d'utilisateur *</label>
+        <input id="username" name="username" type="text" value="{{ target_user.username }}" required>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email *</label>
+        <input id="email" name="email" type="email" value="{{ target_user.email }}" required>
+      </div>
+
+      <div class="form-group">
+        <label for="role">Rôle *</label>
+        <select id="role" name="role" required>
+          <option value="PUBLIC" {% if current_role == 'PUBLIC' %}selected{% endif %}>PUBLIC</option>
+          <option value="INSPECTEUR" {% if current_role == 'INSPECTEUR' %}selected{% endif %}>INSPECTEUR</option>
+          <option value="ADMIN" {% if current_role == 'ADMIN' %}selected{% endif %}>ADMIN</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Nouveau mot de passe (optionnel)</label>
+        <div class="password-inline">
+          <input id="password" name="password" type="text" placeholder="Laisser vide pour garder l'ancien">
+          <button type="button" class="btn btn-secondary" onclick="generatePassword()">
+            <i class="bi bi-magic"></i> Générer
+          </button>
+        </div>
+        <p class="hint">Si défini, le nouveau mot de passe sera envoyé par email à l'utilisateur.</p>
+      </div>
+    </div>
+
+    <div class="actions-row">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle"></i> Enregistrer</button>
+      <a href="{% url 'user-management' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Retour</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  function generatePassword(length = 12) {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    document.getElementById('password').value = password;
+  }
+</script>
+{% endblock %}

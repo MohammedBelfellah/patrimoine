@@ -73,8 +73,7 @@
     }
 
     .actions {
-        text-align: center;
-        white-space: nowrap;
+        min-width: 220px;
     }
 
     .role-badge {
@@ -107,6 +106,80 @@
         background: #d1fae5;
     }
 
+    .action-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+    }
+
+    .action-toolbar form {
+        display: inline-flex;
+        margin: 0;
+    }
+
+    .icon-btn {
+        width: 42px;
+        height: 42px;
+        border-radius: 11px;
+        border: 1px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.05rem;
+        cursor: pointer;
+        transition: all .15s ease;
+    }
+
+    .icon-btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+    }
+
+    .icon-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .icon-blue {
+        color: #2563eb;
+        background: #eaf2ff;
+        border-color: #93c5fd;
+    }
+
+    .icon-yellow {
+        color: #d97706;
+        background: #fff7e8;
+        border-color: #facc15;
+    }
+
+    .icon-red {
+        color: #dc2626;
+        background: #fff1f2;
+        border-color: #fda4af;
+    }
+
+    .icon-dark {
+        color: #fff;
+        background: #0f172a;
+        border-color: #0f172a;
+    }
+
+    .danger-zone {
+        margin-top: 0;
+    }
+
+    .row-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: nowrap;
+        justify-content: center;
+    }
+
+    .row-actions form {
+        margin: 0;
+    }
+
     @media (max-width: 1200px) {
         .page-title h2 {
             font-size: 1.7rem;
@@ -124,6 +197,13 @@
     <div class="filter-wrap">
         <div class="filter-head"><i class="bi bi-person-plus"></i> Ajouter un utilisateur</div>
         <div class="filter-body">
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert-inline {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+                <i class="bi {% if message.tags == 'error' %}bi-x-circle{% else %}bi-check-circle{% endif %}"></i> {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
             {% if error %}
             <div class="alert-inline alert-error">
                 <i class="bi bi-x-circle"></i> {{ error }}
@@ -170,6 +250,7 @@
         <table>
             <thead>
                 <tr>
+                    <th>Nom d'utilisateur</th>
                     <th>Email</th>
                     <th>Groupes</th>
                     <th class="actions">Actions</th>
@@ -178,6 +259,7 @@
             <tbody>
                 {% for user in users %}
                 <tr>
+                    <td><strong>{{ user.username }}</strong></td>
                     <td>
                         <strong>{{ user.email }}</strong>
                         {% if user.is_superuser %}
@@ -192,23 +274,34 @@
                         {% endif %}
                     </td>
                     <td class="actions">
-                        <form method="post" action="{% url 'toggle-user-group' user_id=user.id group_name='ADMIN' %}"
-                            style="display: inline-block; margin-right: 8px;">
-                            {% csrf_token %}
-                            <button type="submit"
-                                class="btn btn-sm {% if user.is_admin %}btn-danger{% else %}btn-success{% endif %}">
-                                {% if user.is_admin %}Retirer ADMIN{% else %}Ajouter ADMIN{% endif %}
-                            </button>
-                        </form>
-                        <form method="post"
-                            action="{% url 'toggle-user-group' user_id=user.id group_name='INSPECTEUR' %}"
-                            style="display: inline-block;">
-                            {% csrf_token %}
-                            <button type="submit"
-                                class="btn btn-sm {% if user.is_inspecteur %}btn-danger{% else %}btn-success{% endif %}">
-                                {% if user.is_inspecteur %}Retirer INSPECTEUR{% else %}Ajouter INSPECTEUR{% endif %}
-                            </button>
-                        </form>
+                        <div class="row-actions">
+                            <div class="action-toolbar">
+                                <form method="post" action="{% url 'toggle-user-group' user_id=user.id group_name='ADMIN' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="icon-btn {% if user.is_admin %}icon-red{% else %}icon-blue{% endif %}"
+                                        title="{% if user.is_admin %}Retirer rôle ADMIN{% else %}Ajouter rôle ADMIN{% endif %}">
+                                        <i class="bi {% if user.is_admin %}bi-shield-x{% else %}bi-shield-plus{% endif %}"></i>
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'toggle-user-group' user_id=user.id group_name='INSPECTEUR' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="icon-btn {% if user.is_inspecteur %}icon-red{% else %}icon-yellow{% endif %}"
+                                        title="{% if user.is_inspecteur %}Retirer rôle INSPECTEUR{% else %}Ajouter rôle INSPECTEUR{% endif %}">
+                                        <i class="bi {% if user.is_inspecteur %}bi-person-dash{% else %}bi-person-check{% endif %}"></i>
+                                    </button>
+                                </form>
+                                <a href="{% url 'edit-user' user_id=user.id %}" class="icon-btn icon-blue" title="Éditer utilisateur">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form method="post" action="{% url 'delete-user' user_id=user.id %}" onsubmit="return confirm('Supprimer cet utilisateur ?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="icon-btn icon-dark" {% if user.is_superuser %}disabled{% endif %}
+                                        title="Supprimer utilisateur">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}

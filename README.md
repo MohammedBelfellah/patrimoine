@@ -52,6 +52,33 @@ Arrêter les conteneurs:
 docker compose down
 ```
 
+## 5) Email de bienvenue à la création d'utilisateur
+
+Quand un Superadmin crée un utilisateur depuis **Gestion des utilisateurs**, un email de bienvenue est envoyé avec:
+
+- rôle
+- identifiants de connexion
+- lien de connexion
+- lien vers le dashboard du rôle
+
+Configurer SMTP dans `.env`:
+
+```dotenv
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp-relay.brevo.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=1
+EMAIL_HOST_USER=your_smtp_user
+EMAIL_HOST_PASSWORD=your_smtp_password
+DEFAULT_FROM_EMAIL=noreply@your-domain.com
+```
+
+### Services email gratuits (ou free tier)
+
+- **Brevo (Sendinblue)**: free tier, SMTP simple à configurer
+- **Mailtrap**: free tier pour test/dev (sandbox)
+- **Gmail SMTP**: possible avec mot de passe d'application (moins recommandé pour prod)
+
 ## Important: réinitialiser complètement la base
 
 Le script `mpd_complete.sql` est exécuté uniquement si le volume DB est vide.

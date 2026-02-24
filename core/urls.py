@@ -13,6 +13,9 @@ urlpatterns = [
     path("dashboard/inspecteur/", views.inspecteur_view, name="dashboard-inspecteur"),
     path("dashboard/public/", views.public_dashboard_view, name="dashboard-public"),
     path("users/", pat_views.user_management, name="user-management"),
+    path("users/<int:user_id>/edit/", pat_views.edit_user, name="edit-user"),
+    path("users/<int:user_id>/update-email/", pat_views.update_user_email, name="update-user-email"),
+    path("users/<int:user_id>/delete/", pat_views.delete_user, name="delete-user"),
     path("users/<int:user_id>/toggle/<str:group_name>/", pat_views.toggle_user_group, name="toggle-user-group"),
     path("audit/", pat_views.audit_log, name="audit-log"),
 ]

@@ -4,21 +4,28 @@ import os
 import tempfile
 from datetime import date, datetime
 from decimal import Decimal
+import logging
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group, User
 from django.contrib import messages
 from django.contrib.gis.geos import GEOSGeometry, MultiPolygon
 from django.contrib.gis.gdal import DataSource
+from django.core.mail import send_mail
 from django.core.files.storage import default_storage
+from django.conf import settings
 from django.db import connection
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
 from .models import AuditLog, Commune, Document, Inspection, InspectionModificationRequest, Intervention, Patrimoine, Province, Region
+
+
+logger = logging.getLogger(__name__)
 
 
 def _geometry_from_spatial_file(uploaded_file):
@@ -100,6 +107,90 @@ def _log_audit(actor, action, entity_type, entity_id, old_data=None, new_data=No
         old_data=_normalize_audit_data(old_data),
         new_data=_normalize_audit_data(new_data),
         created_at=timezone.now(),
+    )
+
+
+def _dashboard_url_for_role(role):
+    if role == "ADMIN":
+        return reverse("dashboard-admin")
+    if role == "INSPECTEUR":
+        return reverse("dashboard-inspecteur")
+    return reverse("dashboard-public")
+
+
+def _send_welcome_user_email(request, user, raw_password, role):
+    login_url = request.build_absolute_uri(reverse("login"))
+    dashboard_url = request.build_absolute_uri(_dashboard_url_for_role(role))
+    role_label = role.capitalize()
+
+    subject = "Bienvenue sur Patrimoine"
+    message = (
+        "Bienvenue sur la plateforme Patrimoine.\n\n"
+        "Votre compte a ete cree par le Superadmin.\n\n"
+        f"Role: {role_label}\n"
+        f"Email de connexion: {user.email}\n"
+        f"Nom d'utilisateur: {user.username}\n"
+        f"Mot de passe provisoire: {raw_password}\n\n"
+        "Liens utiles:\n"
+        f"- Connexion: {login_url}\n"
+        f"- Tableau de bord: {dashboard_url}\n\n"
+        "Pour des raisons de securite, changez votre mot de passe apres la premiere connexion."
+    )
+
+    send_mail(
+        subject=subject,
+        message=message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
+
+
+def _send_user_updated_email(request, user, old_email, old_username, role, raw_password=None):
+    login_url = request.build_absolute_uri(reverse("login"))
+    dashboard_url = request.build_absolute_uri(_dashboard_url_for_role(role))
+    role_label = role.capitalize()
+
+    message_lines = [
+        "Votre compte Patrimoine a ete mis a jour par le Superadmin.",
+        "",
+        f"Nouveau role: {role_label}",
+        f"Email de connexion: {user.email}",
+        f"Nom d'utilisateur: {user.username}",
+    ]
+
+    if raw_password:
+        message_lines.extend([
+            f"Nouveau mot de passe provisoire: {raw_password}",
+            "",
+            "Pour des raisons de securite, changez votre mot de passe apres connexion.",
+        ])
+
+    if old_email != user.email or old_username != user.username:
+        message_lines.extend([
+            "",
+            "Anciennes informations:",
+            f"- Ancien email: {old_email}",
+            f"- Ancien nom d'utilisateur: {old_username}",
+        ])
+
+    message_lines.extend([
+        "",
+        "Liens utiles:",
+        f"- Connexion: {login_url}",
+        f"- Tableau de bord: {dashboard_url}",
+    ])
+
+    recipients = [user.email]
+    if old_email and old_email != user.email:
+        recipients.append(old_email)
+
+    send_mail(
+        subject="Mise a jour de votre compte Patrimoine",
+        message="\n".join(message_lines),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=recipients,
+        fail_silently=False,
     )
 
 
@@ -1391,7 +1482,13 @@ def user_management(request):
             elif role == "INSPECTEUR":
                 new_user.groups.add(Group.objects.get(name="INSPECTEUR"))
 
-            success = "Utilisateur créé avec succès."
+            try:
+                _send_welcome_user_email(request, new_user, password, role)
+                logger.info("Welcome email accepted by SMTP for user_id=%s email=%s", new_user.id, new_user.email)
+                success = "Utilisateur créé avec succès. Email de bienvenue envoyé."
+            except Exception as exc:
+                logger.exception("Welcome email failed for user_id=%s email=%s error=%s", new_user.id, new_user.email, exc)
+                success = "Utilisateur créé avec succès. Email non envoyé (vérifiez la configuration SMTP)."
 
     users = User.objects.all().prefetch_related("groups")
     for user in users:
@@ -1412,6 +1509,85 @@ def user_management(request):
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
+def edit_user(request, user_id):
+    """Edit user profile/role (superadmin only)."""
+    if not request.user.is_superuser:
+        return redirect("dashboard")
+
+    target_user = get_object_or_404(User, id=user_id)
+
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip().lower()
+        username = request.POST.get("username", "").strip()
+        role = request.POST.get("role", "").strip().upper()
+        new_password = request.POST.get("password", "").strip()
+
+        if not email or not username:
+            messages.error(request, "Email et nom d'utilisateur sont obligatoires.")
+            return redirect("edit-user", user_id=target_user.id)
+
+        if role not in {"ADMIN", "INSPECTEUR", "PUBLIC"}:
+            messages.error(request, "Rôle invalide.")
+            return redirect("edit-user", user_id=target_user.id)
+
+        if User.objects.exclude(id=target_user.id).filter(email=email).exists():
+            messages.error(request, "Cet email est déjà utilisé.")
+            return redirect("edit-user", user_id=target_user.id)
+
+        if User.objects.exclude(id=target_user.id).filter(username=username).exists():
+            messages.error(request, "Ce nom d'utilisateur est déjà utilisé.")
+            return redirect("edit-user", user_id=target_user.id)
+
+        old_email = target_user.email
+        old_username = target_user.username
+
+        target_user.email = email
+        target_user.username = username
+        target_user.is_staff = role == "ADMIN"
+
+        if new_password:
+            target_user.set_password(new_password)
+
+        target_user.save()
+
+        target_user.groups.clear()
+        if role == "ADMIN":
+            target_user.groups.add(Group.objects.get(name="ADMIN"))
+        elif role == "INSPECTEUR":
+            target_user.groups.add(Group.objects.get(name="INSPECTEUR"))
+
+        try:
+            _send_user_updated_email(
+                request=request,
+                user=target_user,
+                old_email=old_email,
+                old_username=old_username,
+                role=role,
+                raw_password=new_password or None,
+            )
+            logger.info("Update notification email accepted by SMTP for user_id=%s email=%s", target_user.id, target_user.email)
+            messages.success(request, "Utilisateur modifié. Email de notification envoyé.")
+        except Exception as exc:
+            logger.exception("Update notification email failed for user_id=%s email=%s error=%s", target_user.id, target_user.email, exc)
+            messages.warning(request, "Utilisateur modifié. Email de notification non envoyé.")
+
+        return redirect("user-management")
+
+    current_role = "PUBLIC"
+    if target_user.groups.filter(name="ADMIN").exists():
+        current_role = "ADMIN"
+    elif target_user.groups.filter(name="INSPECTEUR").exists():
+        current_role = "INSPECTEUR"
+
+    context = {
+        "target_user": target_user,
+        "current_role": current_role,
+    }
+    return render(request, "core/user_edit.html", context)
+
+
+@login_required
 @require_http_methods(["POST"])
 def toggle_user_group(request, user_id, group_name):
     """Toggle user group membership (superadmin only)."""
@@ -1426,6 +1602,55 @@ def toggle_user_group(request, user_id, group_name):
     else:
         user.groups.add(group)
 
+    return redirect("user-management")
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_user_email(request, user_id):
+    """Update user email (superadmin only)."""
+    if not request.user.is_superuser:
+        return redirect("dashboard")
+
+    user = get_object_or_404(User, id=user_id)
+    new_email = request.POST.get("email", "").strip().lower()
+
+    if not new_email:
+        messages.error(request, "Email invalide.")
+        return redirect("user-management")
+
+    if User.objects.exclude(id=user.id).filter(email=new_email).exists():
+        messages.error(request, "Cet email est déjà utilisé par un autre utilisateur.")
+        return redirect("user-management")
+
+    old_email = user.email
+    user.email = new_email
+    user.save(update_fields=["email"])
+
+    messages.success(request, f"Email mis à jour pour {user.username} : {old_email} → {new_email}")
+    return redirect("user-management")
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_user(request, user_id):
+    """Delete user (superadmin only)."""
+    if not request.user.is_superuser:
+        return redirect("dashboard")
+
+    user = get_object_or_404(User, id=user_id)
+
+    if user.id == request.user.id:
+        messages.error(request, "Vous ne pouvez pas supprimer votre propre compte.")
+        return redirect("user-management")
+
+    if user.is_superuser:
+        messages.error(request, "Suppression d'un superadmin non autorisée depuis cet écran.")
+        return redirect("user-management")
+
+    username = user.username
+    user.delete()
+    messages.success(request, f"Utilisateur supprimé: {username}")
     return redirect("user-management")
 
 

@@ -265,6 +265,7 @@
       </div>
     </div>
     <div id="map"></div>
+      <div id="liveCoords" style="position:fixed;bottom:24px;right:32px;background:rgba(255,255,255,0.95);border:1px solid #ddd;border-radius:8px;padding:7px 14px;font-size:0.98rem;color:#334155;box-shadow:0 2px 8px rgba(0,0,0,0.07);z-index:9999;">Lat: --, Lng: --</div>
   </div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -614,5 +615,11 @@
       gisStatus.textContent = 'Erreur export PDF. Réessayez après chargement complet de la carte.';
     }
   });
+
+    // Update live coordinates on mouse move
+    map.on('mousemove', function(e) {
+      const { lat, lng } = e.latlng;
+      document.getElementById('liveCoords').textContent = `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`;
+    });
 </script>
 {% endblock %}

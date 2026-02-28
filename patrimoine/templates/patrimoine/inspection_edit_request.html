@@ -104,7 +104,7 @@
       <div class="current-value">Valeur actuelle: {{ inspection.get_etat_display }}</div>
       <select id="etat" name="etat" required>
         {% for value, label in inspection_etat %}
-        <option value="{{ value }}" {% if inspection.etat==value %}selected{% endif %}>{{ label }}</option>
+        <option value="{{ value }}" {% if inspection.etat == value %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
     </div>

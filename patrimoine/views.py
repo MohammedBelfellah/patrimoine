@@ -7,11 +7,12 @@ from decimal import Decimal
 import logging
 
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import Group, User
 from django.contrib import messages
 from django.contrib.gis.geos import GEOSGeometry, MultiPolygon
 from django.contrib.gis.gdal import DataSource
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
 from django.core.files.storage import default_storage
 from django.conf import settings
 from django.db import connection
@@ -20,7 +21,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.urls import reverse
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_GET
 
 from .models import AuditLog, Commune, Document, Inspection, InspectionModificationRequest, Intervention, Patrimoine, Province, Region
 
@@ -124,26 +125,46 @@ def _send_welcome_user_email(request, user, raw_password, role):
     role_label = role.capitalize()
 
     subject = "Bienvenue sur Patrimoine"
-    message = (
-        "Bienvenue sur la plateforme Patrimoine.\n\n"
-        "Votre compte a ete cree par le Superadmin.\n\n"
-        f"Role: {role_label}\n"
-        f"Email de connexion: {user.email}\n"
-        f"Nom d'utilisateur: {user.username}\n"
-        f"Mot de passe provisoire: {raw_password}\n\n"
-        "Liens utiles:\n"
-        f"- Connexion: {login_url}\n"
-        f"- Tableau de bord: {dashboard_url}\n\n"
-        "Pour des raisons de securite, changez votre mot de passe apres la premiere connexion."
-    )
+    text_message = f"""
+Bonjour {user.username},
 
-    send_mail(
+Votre compte a été créé avec succès sur la plateforme Patrimoine.
+
+Rôle : {role_label}
+Email : {user.email}
+Nom d'utilisateur : {user.username}
+Mot de passe provisoire : {raw_password}
+
+Accédez à votre espace : {dashboard_url}
+Connexion : {login_url}
+
+Merci,
+L’équipe Patrimoine
+"""
+    html_message = f"""
+<div style='font-family:Arial,sans-serif;max-width:520px;margin:0 auto;'>
+  <h2 style='color:#2563eb;'>Bienvenue sur <span style='color:#0f172a;'>Patrimoine</span></h2>
+  <p>Bonjour <b>{user.username}</b>,</p>
+  <p>Votre compte a été créé avec succès sur la plateforme <b>Patrimoine</b>.</p>
+  <ul style='background:#f1f5f9;padding:14px 18px;border-radius:8px;'>
+    <li><b>Rôle :</b> {role_label}</li>
+    <li><b>Email :</b> {user.email}</li>
+    <li><b>Nom d'utilisateur :</b> {user.username}</li>
+    <li><b>Mot de passe provisoire :</b> <span style='color:#dc2626;'>{raw_password}</span></li>
+  </ul>
+  <p>Accédez à votre espace : <a href='{dashboard_url}' style='color:#2563eb;'>Tableau de bord</a></p>
+  <p>Connexion : <a href='{login_url}' style='color:#2563eb;'>{login_url}</a></p>
+  <p style='margin-top:18px;font-size:13px;color:#64748b;'>Merci,<br>L’équipe Patrimoine</p>
+</div>
+"""
+    msg = EmailMultiAlternatives(
         subject=subject,
-        message=message,
+        body=text_message,
         from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=False,
+        to=[user.email],
     )
+    msg.attach_alternative(html_message, "text/html")
+    msg.send(fail_silently=False)
 
 
 def _send_user_updated_email(request, user, old_email, old_username, role, raw_password=None):
@@ -151,47 +172,50 @@ def _send_user_updated_email(request, user, old_email, old_username, role, raw_p
     dashboard_url = request.build_absolute_uri(_dashboard_url_for_role(role))
     role_label = role.capitalize()
 
-    message_lines = [
-        "Votre compte Patrimoine a ete mis a jour par le Superadmin.",
-        "",
-        f"Nouveau role: {role_label}",
-        f"Email de connexion: {user.email}",
-        f"Nom d'utilisateur: {user.username}",
-    ]
+    subject = "Mise à jour de votre compte Patrimoine"
+    text_message = f"""
+Bonjour {user.username},
 
+Votre compte Patrimoine a été mis à jour par le Superadmin.
+
+Nouveau rôle : {role_label}
+Email : {user.email}
+Nom d'utilisateur : {user.username}
+"""
     if raw_password:
-        message_lines.extend([
-            f"Nouveau mot de passe provisoire: {raw_password}",
-            "",
-            "Pour des raisons de securite, changez votre mot de passe apres connexion.",
-        ])
-
+        text_message += f"\nNouveau mot de passe provisoire : {raw_password}\n(Changez-le après connexion.)\n"
     if old_email != user.email or old_username != user.username:
-        message_lines.extend([
-            "",
-            "Anciennes informations:",
-            f"- Ancien email: {old_email}",
-            f"- Ancien nom d'utilisateur: {old_username}",
-        ])
+        text_message += f"\nAnciennes informations :\n- Ancien email : {old_email}\n- Ancien nom d'utilisateur : {old_username}\n"
+    text_message += f"\nConnexion : {login_url}\nTableau de bord : {dashboard_url}\n\nMerci,\nL’équipe Patrimoine"
 
-    message_lines.extend([
-        "",
-        "Liens utiles:",
-        f"- Connexion: {login_url}",
-        f"- Tableau de bord: {dashboard_url}",
-    ])
-
+    html_message = f"""
+<div style='font-family:Arial,sans-serif;max-width:520px;margin:0 auto;'>
+  <h2 style='color:#2563eb;'>Mise à jour de votre <span style='color:#0f172a;'>compte Patrimoine</span></h2>
+  <p>Bonjour <b>{user.username}</b>,</p>
+  <p>Votre compte a été mis à jour par le Superadmin.</p>
+  <ul style='background:#f1f5f9;padding:14px 18px;border-radius:8px;'>
+    <li><b>Nouveau rôle :</b> {role_label}</li>
+    <li><b>Email :</b> {user.email}</li>
+    <li><b>Nom d'utilisateur :</b> {user.username}</li>
+    {f"<li><b>Nouveau mot de passe provisoire :</b> <span style='color:#dc2626;'>{raw_password}</span></li>" if raw_password else ""}
+  </ul>
+  {f"<p style='font-size:13px;color:#64748b;'>Ancien email : {old_email}<br>Ancien nom d'utilisateur : {old_username}</p>" if (old_email != user.email or old_username != user.username) else ""}
+  <p>Connexion : <a href='{login_url}' style='color:#2563eb;'>{login_url}</a></p>
+  <p>Tableau de bord : <a href='{dashboard_url}' style='color:#2563eb;'>{dashboard_url}</a></p>
+  <p style='margin-top:18px;font-size:13px;color:#64748b;'>Merci,<br>L’équipe Patrimoine</p>
+</div>
+"""
     recipients = [user.email]
     if old_email and old_email != user.email:
         recipients.append(old_email)
-
-    send_mail(
-        subject="Mise a jour de votre compte Patrimoine",
-        message="\n".join(message_lines),
+    msg = EmailMultiAlternatives(
+        subject=subject,
+        body=text_message,
         from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=recipients,
-        fail_silently=False,
+        to=recipients,
     )
+    msg.attach_alternative(html_message, "text/html")
+    msg.send(fail_silently=False)
 
 
 @login_required
@@ -672,14 +696,18 @@ def patrimoine_map(request):
     return render(request, "patrimoine/patrimoine_map.html", context)
 
 
-@login_required
+
+
+@csrf_exempt
+@require_GET
 def api_provinces_by_region(request, id_region):
     """API endpoint: get provinces for a region."""
     provinces = Province.objects.filter(id_region=id_region).values("id_province", "nom_province")
     return JsonResponse(list(provinces), safe=False)
 
 
-@login_required
+@csrf_exempt
+@require_GET
 def api_communes_by_province(request, id_province):
     """API endpoint: get communes for a province."""
     communes = Commune.objects.filter(id_province=id_province).values("id_commune", "nom_commune")
@@ -693,7 +721,8 @@ def api_patrimoines_by_commune(request, id_commune):
     return JsonResponse(list(patrimoines), safe=False)
 
 
-@login_required
+@csrf_exempt
+@require_GET
 def api_regions(request):
     """API endpoint: get all regions."""
     regions = Region.objects.values("id_region", "nom_region")
@@ -853,11 +882,14 @@ def inspection_detail(request, id_inspection):
         not modification_requests.filter(status="PENDING").exists()  # No pending requests
     )
     
+    # Get documents linked to this inspection
+    documents = Document.objects.filter(id_inspection=inspection)
     context = {
         "inspection": inspection,
         "modification_requests": modification_requests,
         "can_request_modification": can_request_modification,
         "is_admin": _is_admin(request.user),
+        "documents": documents,
     }
     return render(request, "patrimoine/inspection_detail.html", context)
 
@@ -868,6 +900,7 @@ def inspection_create(request):
     """Create inspection - only INSPECTEUR."""
     if not _can_add_inspection(request.user):
         return redirect("inspection-list")
+
 
     if request.method == "POST":
         try:
@@ -884,6 +917,20 @@ def inspection_create(request):
                 etat=etat,
                 observations=observations,
             )
+            # Handle file uploads (PDF, images, etc.)
+            files = request.FILES.getlist("files")
+            for f in files:
+                ext = f.name.split('.')[-1].lower()
+                doc_type = "PDF" if ext == "pdf" else ("IMAGE" if ext in ["jpg", "jpeg", "png", "gif", "webp"] else "AUTRE")
+                file_path = default_storage.save(f"patrimoine/inspection/{inspection.id_inspection}/{f.name}", f)
+                Document.objects.create(
+                    type_document=doc_type,
+                    file_name=f.name,
+                    file_path=file_path,
+                    file_size_mb=round(f.size / (1024 * 1024), 2),
+                    uploaded_by=request.user,
+                    id_inspection=inspection,
+                )
             _log_audit(
                 request.user,
                 "CREATE",
@@ -1482,6 +1529,20 @@ def user_management(request):
             elif role == "INSPECTEUR":
                 new_user.groups.add(Group.objects.get(name="INSPECTEUR"))
 
+            # Audit log for user creation
+            AuditLog.objects.create(
+                actor=request.user,
+                action="CREATE",
+                entity_type="USER",
+                entity_id=new_user.id,
+                old_data=None,
+                new_data={
+                    "username": username,
+                    "email": email,
+                    "role": role,
+                },
+                created_at=timezone.now(),
+            )
             try:
                 _send_welcome_user_email(request, new_user, password, role)
                 logger.info("Welcome email accepted by SMTP for user_id=%s email=%s", new_user.id, new_user.email)
@@ -1649,6 +1710,20 @@ def delete_user(request, user_id):
         return redirect("user-management")
 
     username = user.username
+    # Audit log for user deletion
+    AuditLog.objects.create(
+        actor=request.user,
+        action="DELETE",
+        entity_type="USER",
+        entity_id=user.id,
+        old_data={
+            "username": user.username,
+            "email": user.email,
+            "groups": list(user.groups.values_list("name", flat=True)),
+        },
+        new_data=None,
+        created_at=timezone.now(),
+    )
     user.delete()
     messages.success(request, f"Utilisateur supprimé: {username}")
     return redirect("user-management")

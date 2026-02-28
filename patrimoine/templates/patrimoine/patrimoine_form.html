@@ -106,7 +106,7 @@
         <select id="type_patrimoine" name="type_patrimoine" required>
           <option value="">-- Sélectionner --</option>
           {% for code, label in patrimoine_types %}
-          <option value="{{ code }}" {% if patrimoine.type_patrimoine==code %}selected{% endif %}>{{ label }}</option>
+              <option value="{{ code }}" {% if patrimoine.type_patrimoine == code %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
       </div>
@@ -114,7 +114,7 @@
         <label for="statut">Statut</label>
         <select id="statut" name="statut">
           {% for code, label in patrimoine_statuts %}
-          <option value="{{ code }}" {% if patrimoine.statut==code %}selected{% endif %}>{{ label }}</option>
+              <option value="{{ code }}" {% if patrimoine.statut == code %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
       </div>
@@ -163,9 +163,7 @@
         <select id="region" name="region" required onchange="updateProvinces()">
           <option value="">-- Sélectionner --</option>
           {% for region in regions %}
-          <option value="{{ region.id_region }}" {% if
-            patrimoine.id_commune.id_province.id_region.id_region==region.id_region %}selected{% endif %}>{{
-            region.nom_region }}</option>
+          <option value="{{ region.id_region }}" {% if patrimoine.id_commune.id_province.id_region.id_region == region.id_region %}selected{% endif %}>{{ region.nom_region }}</option>
           {% endfor %}
         </select>
       </div>
@@ -174,9 +172,7 @@
         <select id="province" name="province" required onchange="updateCommunes()">
           <option value="">-- Sélectionner --</option>
           {% for province in provinces %}
-          <option value="{{ province.id_province }}" {% if
-            patrimoine.id_commune.id_province.id_province==province.id_province %}selected{% endif %}>{{
-            province.nom_province }}</option>
+          <option value="{{ province.id_province }}" {% if patrimoine.id_commune.id_province.id_province == province.id_province %}selected{% endif %}>{{ province.nom_province }}</option>
           {% endfor %}
         </select>
       </div>
@@ -187,8 +183,7 @@
       <select id="id_commune" name="id_commune" required>
         <option value="">-- Sélectionner --</option>
         {% for commune in communes %}
-        <option value="{{ commune.id_commune }}" {% if patrimoine.id_commune.id_commune==commune.id_commune %}selected{%
-          endif %}>{{ commune.nom_commune }}</option>
+        <option value="{{ commune.id_commune }}" {% if patrimoine.id_commune == commune.id_commune %}selected{% endif %}>{{ commune.nom_commune }}</option>
         {% endfor %}
       </select>
     </div>
@@ -329,6 +324,48 @@
     }
     return null;
   }
+
+    // --- Auto-populate Province and Commune on page load (for edit forms) ---
+    document.addEventListener('DOMContentLoaded', function () {
+      const regionSelect = document.getElementById('region');
+      const provinceSelect = document.getElementById('province');
+      const communeSelect = document.getElementById('id_commune');
+
+      // If a region is pre-selected, populate provinces
+      if (regionSelect.value) {
+        fetch(`/api/provinces/${regionSelect.value}/`)
+          .then(r => r.json())
+          .then(data => {
+            provinceSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+            data.forEach(p => {
+              const opt = document.createElement('option');
+              opt.value = p.id_province;
+              opt.textContent = p.nom_province;
+              if (String(opt.value) === String(provinceSelect.getAttribute('data-selected'))) {
+                opt.selected = true;
+              }
+              provinceSelect.appendChild(opt);
+            });
+            // If a province is pre-selected, populate communes
+            if (provinceSelect.value) {
+              fetch(`/api/communes/${provinceSelect.value}/`)
+                .then(r => r.json())
+                .then(data => {
+                  communeSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+                  data.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id_commune;
+                    opt.textContent = c.nom_commune;
+                    if (String(opt.value) === String(communeSelect.getAttribute('data-selected'))) {
+                      opt.selected = true;
+                    }
+                    communeSelect.appendChild(opt);
+                  });
+                });
+            }
+          });
+      }
+    });
 
   document.getElementById('spatial_file').addEventListener('change', function (e) {
     const file = e.target.files[0];

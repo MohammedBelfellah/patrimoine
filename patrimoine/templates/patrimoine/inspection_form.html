@@ -76,8 +76,10 @@
   <div class="error"><i class="bi bi-x-circle"></i> {{ error }}</div>
   {% endif %}
 
-  <form method="post">
+  <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
+
+  <!-- ...existing form fields... -->
 
     <div class="form-group">
       <label for="id_region"><strong>Région *</strong></label>
@@ -133,19 +135,78 @@
       <textarea id="observations" name="observations"></textarea>
     </div>
 
+    <!-- File upload field moved to the end -->
+    <div class="form-group">
+      <label for="files"><strong>Fichiers (PDF, Word, images, max 5)</strong></label>
+      <input type="file" id="files" name="files" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp" multiple />
+      <p class="muted" style="margin-top: 4px;"><small>Formats acceptés: PDF, DOC, DOCX, JPG, PNG, GIF, WEBP. Maximum 5 fichiers.</small></p>
+      <div id="file-preview" style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;"></div>
+    </div>
+
     <div style="display: flex; gap: 10px;">
       <button type="submit" style="flex: 1;">Créer inspection</button>
       <a href="{% url 'inspection-list' %}" class="btn btn-secondary"
         style="padding: 10px 16px; text-decoration: none; background: #6b7280; color: white; display: flex; align-items: center; justify-content: center; border-radius: 4px; flex: 1;">Annuler</a>
     </div>
+
+    <!-- File upload preview script will be moved below -->
   </form>
 </div>
 
-<script>
-  // Get list of regions
-  const regionApi = '/api/regions/';
+<!-- Move all scripts to the end for global scope -->
+  </div>
 
+  <script>
+  // File upload preview
+  document.getElementById('files').addEventListener('change', function (e) {
+    const preview = document.getElementById('file-preview');
+    preview.innerHTML = '';
+    const files = Array.from(e.target.files);
+    if (files.length > 5) {
+      alert('Maximum 5 fichiers autorisés');
+      e.target.value = '';
+      return;
+    }
+    files.forEach(file => {
+      const div = document.createElement('div');
+      div.style.display = 'flex';
+      div.style.flexDirection = 'column';
+      div.style.alignItems = 'center';
+      div.style.maxWidth = '100px';
+      div.style.fontSize = '12px';
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          const img = document.createElement('img');
+          img.src = event.target.result;
+          img.style.width = '80px';
+          img.style.height = '80px';
+          img.style.objectFit = 'cover';
+          img.style.borderRadius = '8px';
+          img.style.border = '2px solid #e5e7eb';
+          img.title = file.name;
+          div.appendChild(img);
+          const label = document.createElement('div');
+          label.textContent = file.name;
+          div.appendChild(label);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const icon = document.createElement('span');
+        icon.textContent = '📄';
+        icon.style.fontSize = '2em';
+        div.appendChild(icon);
+        const label = document.createElement('div');
+        label.textContent = file.name;
+        div.appendChild(label);
+      }
+      preview.appendChild(div);
+    });
+  });
+
+  // Dynamic selects
   function updateInspectionProvinces() {
+    console.log('updateInspectionProvinces called');
     const regionId = document.getElementById('id_region').value;
     const provinceSelect = document.getElementById('id_province');
     const communeSelect = document.getElementById('id_commune');
@@ -159,9 +220,23 @@
       return;
     }
 
+    provinceSelect.innerHTML = '<option value="">Chargement...</option>';
     fetch(`/api/provinces/${regionId}/`)
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) {
+          alert('Erreur AJAX: provinces');
+          console.error('AJAX error provinces:', r.status, r.statusText);
+          provinceSelect.innerHTML = '<option value="">Erreur chargement</option>';
+          return [];
+        }
+        return r.json();
+      })
       .then(data => {
+        console.log('Provinces response:', data);
+        if (!Array.isArray(data) || data.length === 0) {
+          provinceSelect.innerHTML = '<option value="">Aucune province trouvée</option>';
+          return;
+        }
         provinceSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
         data.forEach(p => {
           const opt = document.createElement('option');
@@ -170,7 +245,11 @@
           provinceSelect.appendChild(opt);
         });
       })
-      .catch(err => console.error('Error loading provinces:', err));
+      .catch(err => {
+        alert('Erreur JS provinces: ' + err);
+        provinceSelect.innerHTML = '<option value="">Erreur JS</option>';
+        console.error('Error loading provinces:', err);
+      });
   }
 
   function updateInspectionCommunes() {
@@ -186,8 +265,15 @@
     }
 
     fetch(`/api/communes/${provinceId}/`)
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) {
+          alert('Erreur AJAX: communes');
+          console.error('AJAX error communes:', r.status, r.statusText);
+        }
+        return r.json();
+      })
       .then(data => {
+        console.log('Communes response:', data);
         communeSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
         data.forEach(c => {
           const opt = document.createElement('option');
@@ -196,7 +282,10 @@
           communeSelect.appendChild(opt);
         });
       })
-      .catch(err => console.error('Error loading communes:', err));
+      .catch(err => {
+        alert('Erreur JS communes');
+        console.error('Error loading communes:', err);
+      });
   }
 
   function updateInspectionPatrimoines() {
@@ -209,8 +298,15 @@
     }
 
     fetch(`/api/patrimoines-by-commune/${communeId}/`)
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) {
+          alert('Erreur AJAX: patrimoines');
+          console.error('AJAX error patrimoines:', r.status, r.statusText);
+        }
+        return r.json();
+      })
       .then(data => {
+        console.log('Patrimoines response:', data);
         patrimoineSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
         data.forEach(p => {
           const opt = document.createElement('option');
@@ -219,7 +315,138 @@
           patrimoineSelect.appendChild(opt);
         });
       })
-      .catch(err => console.error('Error loading patrimoines:', err));
+      .catch(err => {
+        alert('Erreur JS patrimoines');
+        console.error('Error loading patrimoines:', err);
+      });
   }
+  </script>
+<script>
+  // Get list of regions
+  const regionApi = '/api/regions/';
+
+  function updateInspectionProvinces() {
+    console.log('updateInspectionProvinces called');
+    const regionId = document.getElementById('id_region').value;
+    const provinceSelect = document.getElementById('id_province');
+    const communeSelect = document.getElementById('id_commune');
+    const patrimoineSelect = document.getElementById('id_patrimoine');
+
+    communeSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+    patrimoineSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+
+    if (!regionId) {
+      provinceSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+      return;
+    }
+
+    provinceSelect.innerHTML = '<option value="">Chargement...</option>';
+    fetch(`/api/provinces/${regionId}/`)
+      .then(r => {
+        if (!r.ok) {
+          alert('Erreur AJAX: provinces');
+          console.error('AJAX error provinces:', r.status, r.statusText);
+          provinceSelect.innerHTML = '<option value="">Erreur chargement</option>';
+          return [];
+        }
+        return r.json();
+      })
+      .then(data => {
+        console.log('Provinces response:', data);
+        if (!Array.isArray(data) || data.length === 0) {
+          provinceSelect.innerHTML = '<option value="">Aucune province trouvée</option>';
+          return;
+        }
+        provinceSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+        data.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id_province;
+          opt.textContent = p.nom_province;
+          provinceSelect.appendChild(opt);
+        });
+      })
+      .catch(err => {
+        alert('Erreur JS provinces: ' + err);
+        provinceSelect.innerHTML = '<option value="">Erreur JS</option>';
+        console.error('Error loading provinces:', err);
+      });
+  }
+
+  function updateInspectionCommunes() {
+    const provinceId = document.getElementById('id_province').value;
+    const communeSelect = document.getElementById('id_commune');
+    const patrimoineSelect = document.getElementById('id_patrimoine');
+
+    patrimoineSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+
+    if (!provinceId) {
+      communeSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+      return;
+    }
+
+    fetch(`/api/communes/${provinceId}/`)
+      .then(r => {
+        if (!r.ok) {
+          alert('Erreur AJAX: communes');
+          console.error('AJAX error communes:', r.status, r.statusText);
+        }
+        return r.json();
+      })
+      .then(data => {
+        console.log('Communes response:', data);
+        communeSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+        data.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id_commune;
+          opt.textContent = c.nom_commune;
+          communeSelect.appendChild(opt);
+        });
+      })
+      .catch(err => {
+        alert('Erreur JS communes');
+        console.error('Error loading communes:', err);
+      });
+  }
+
+  function updateInspectionPatrimoines() {
+    const communeId = document.getElementById('id_commune').value;
+    const patrimoineSelect = document.getElementById('id_patrimoine');
+
+    if (!communeId) {
+      patrimoineSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+      return;
+    }
+
+    fetch(`/api/patrimoines-by-commune/${communeId}/`)
+      .then(r => {
+        if (!r.ok) {
+          alert('Erreur AJAX: patrimoines');
+          console.error('AJAX error patrimoines:', r.status, r.statusText);
+        }
+        return r.json();
+      })
+      .then(data => {
+        console.log('Patrimoines response:', data);
+        patrimoineSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+        data.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id_patrimoine;
+          opt.textContent = p.nom_fr;
+          patrimoineSelect.appendChild(opt);
+        });
+      })
+      .catch(err => {
+        alert('Erreur JS patrimoines');
+        console.error('Error loading patrimoines:', err);
+      });
+  }
+
+  // Auto-populate provinces if region is pre-selected (e.g. after form error)
+  document.addEventListener('DOMContentLoaded', function() {
+    var regionSelect = document.getElementById('id_region');
+    if (regionSelect && regionSelect.value) {
+      updateInspectionProvinces();
+    }
+  });
 </script>
 {% endblock %}

@@ -1,9 +1,34 @@
 {% extends "core/base.html" %}
 {% block title %}Inspection - {{ inspection.id_patrimoine.nom_fr }}{% endblock %}
 {% block content %}
+
 <div class="card">
   <h2><i class="bi bi-clipboard-check"></i> Inspection: {{ inspection.id_patrimoine.nom_fr }}</h2>
   <p class="muted"><small>{{ inspection.id_patrimoine.full_location }}</small></p>
+
+  {% if documents %}
+  <div style="margin-bottom: 18px;">
+    <h4 style="margin-bottom: 8px;"><i class="bi bi-file-earmark-pdf"></i> Documents liés à cette inspection</h4>
+    <ul style="list-style: none; padding-left: 0;">
+      {% for doc in documents %}
+      <li style="margin-bottom: 8px;">
+        <span style="margin-right: 8px;">
+          {% if doc.type_document == "PDF" %}
+            <i class="bi bi-file-earmark-pdf"></i>
+          {% else %}
+            <i class="bi bi-file-earmark"></i>
+          {% endif %}
+        </span>
+        {{ doc.file_name }}
+        <span style="color: #6b7280; font-size: 0.95rem;">({{ doc.type_document }}, {{ doc.file_size_mb }} MB)</span>
+        <a href="/media/{{ doc.file_path }}" target="_blank" class="btn btn-sm btn-primary" style="margin-left: 12px;">
+          <i class="bi bi-eye"></i> Ouvrir
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
 
   <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
@@ -48,6 +73,29 @@
     {% endif %}
     <a href="{% url 'inspection-list' %}" class="btn btn-secondary">Retour</a>
   </div>
+
+  <!-- Documents Section -->
+  {% if documents %}
+  <div style="margin-top: 24px;">
+    <h3><i class="bi bi-file-earmark-pdf"></i> Documents et PDF liés à cette inspection</h3>
+    <ul style="list-style: none; padding-left: 0;">
+      {% for doc in documents %}
+      <li style="margin-bottom: 10px;">
+        {% if doc.type_document == "PDF" %}
+          <a href="/media/{{ doc.file_path }}" target="_blank" style="color: #dc2626; font-weight: bold;">
+            <i class="bi bi-file-earmark-pdf"></i> {{ doc.file_name }}
+          </a>
+        {% else %}
+          <a href="/media/{{ doc.file_path }}" target="_blank">
+            <i class="bi bi-file-earmark"></i> {{ doc.file_name }}
+          </a>
+        {% endif %}
+        <span style="color: #6b7280; font-size: 0.95rem;">({{ doc.type_document }}, {{ doc.file_size_mb }} MB)</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
 
   <!-- Modification Requests Section -->
   {% if modification_requests %}

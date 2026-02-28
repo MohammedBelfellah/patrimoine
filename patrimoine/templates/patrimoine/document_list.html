@@ -85,7 +85,9 @@
         <td>{{ doc.uploaded_by.email }}</td>
         <td>{{ doc.uploaded_at|date:"d/m/Y H:i" }}</td>
         <td style="text-align: center;">
-          {% if doc.type_document == "IMAGE" %}
+          {% if doc.type_document == "PDF" %}
+            <a href="/media/{{ doc.file_path }}" target="_blank" class="btn-action btn-view"><i class="bi bi-file-earmark-pdf"></i> Ouvrir PDF</a>
+          {% elif doc.type_document == "IMAGE" or doc.type_document == "OFFICIEL" or doc.type_document == "AUTRE" %}
             <a href="/media/{{ doc.file_path }}" target="_blank" class="btn-action btn-view"><i class="bi bi-eye"></i> Voir</a>
           {% else %}
             <span style="color: #9ca3af;">-</span>

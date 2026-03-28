@@ -5,6 +5,11 @@ __pycache__/
 .venv/
 venv/
 staticfiles/
+media/
+*.log
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Docker
 db_data/

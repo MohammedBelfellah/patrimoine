@@ -1,10 +1,11 @@
+{% load static %}
 <!doctype html>
 <html lang="fr">
 
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{% block title %}Geopatrimoine.ma{% endblock %}</title>
+    <title>{% block title %}Patrimoine{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -31,11 +32,22 @@
             background: var(--sand);
             color: var(--ink-2);
             min-height: 100vh;
-                background: rgb(51, 137, 195);
-                border-bottom: 1px solid rgba(51, 137, 195, 0.12);
+        }
+
         .brand-title {
             font-family: "Fraunces", serif;
             letter-spacing: 0.3px;
+        }
+
+        .brand-logo {
+            height: 52px;
+            width: auto;
+            display: block;
+        }
+
+        .navbar-brand {
+            padding-top: 0;
+            padding-bottom: 0;
         }
 
         .app-shell {
@@ -130,26 +142,30 @@
         }
 
         .btn-copper {
-            background: var(--copper);
+            background: #16423c;
             color: #fff;
         }
 
         .btn-copper:hover {
-            background: #9a3412;
+            background: #0f302b;
             color: #fff;
         }
 
         .nav-link {
-            color: #e2e8f0;
+            color: #163a35;
+            font-weight: 600;
         }
 
         .nav-link:hover {
-            color: #fff;
+            color: #0f2f2a;
         }
 
         .topbar {
-              background: linear-gradient(90deg, #ba6709, #ff9500 40%, #90610a); /* orange gradient */
-              border-bottom: 1px solid rgba(255, 136, 0, 0.12);
+              background: linear-gradient(90deg, #f8fcfb, #eef7f4 45%, #e6f1ed) !important;
+              border-bottom: 1px solid rgba(22, 66, 60, 0.18);
+              box-shadow: 0 6px 18px rgba(15, 48, 43, 0.08);
+              padding-top: 0.2rem;
+              padding-bottom: 0.2rem;
         }
 
         .layout {
@@ -209,6 +225,12 @@
             .layout { grid-template-columns: 1fr; }
             .sidebar { position: static; height: auto; border-radius: 12px; }
         }
+
+        @media (max-width: 576px) {
+            .brand-logo {
+                height: 42px;
+            }
+        }
     </style>
     {% block head_extra %}{% endblock %}
 </head>
@@ -227,9 +249,11 @@
         {% endif %}
     </div>
 
-    <nav class="navbar navbar-expand-lg navbar-dark topbar">
+    <nav class="navbar navbar-expand-lg navbar-light topbar">
         <div class="container-fluid app-shell px-3 px-lg-4">
-            <a class="navbar-brand text-white fw-semibold brand-title" href="{% url 'public-map' %}">Geopatrimoine.ma</a>
+            <a class="navbar-brand" href="{% url 'public-map' %}" aria-label="Accueil">
+                <img class="brand-logo" src="{% static 'core/images/logo.png' %}" alt="Logo Patrimoine" />
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
                 aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>

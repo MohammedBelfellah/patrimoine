@@ -15,7 +15,8 @@ from django.contrib.gis.gdal import DataSource
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.core.files.storage import default_storage
 from django.conf import settings
-from django.db import connection
+from django.db import IntegrityError, connection
+from django.db.models.deletion import ProtectedError
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -23,7 +24,17 @@ from django.utils import timezone
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods, require_GET
 
-from .models import AuditLog, Commune, Document, Inspection, InspectionModificationRequest, Intervention, Patrimoine, Province, Region
+from .models import (
+    AuditLog,
+    Commune,
+    Document,
+    Inspection,
+    InspectionModificationRequest,
+    Intervention,
+    Patrimoine,
+    Province,
+    Region,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -167,7 +178,9 @@ L’équipe Patrimoine
     msg.send(fail_silently=False)
 
 
-def _send_user_updated_email(request, user, old_email, old_username, role, raw_password=None):
+def _send_user_updated_email(
+    request, user, old_email, old_username, role, raw_password=None
+):
     login_url = request.build_absolute_uri(reverse("login"))
     dashboard_url = request.build_absolute_uri(_dashboard_url_for_role(role))
     role_label = role.capitalize()
@@ -224,7 +237,9 @@ def patrimoine_list(request):
     if not _can_view(request.user):
         return redirect("public-map")
 
-    patrimoines = Patrimoine.objects.select_related("id_commune__id_province__id_region").all()
+    patrimoines = Patrimoine.objects.select_related(
+        "id_commune__id_province__id_region"
+    ).all()
 
     # Filters
     search = request.GET.get("search", "").strip()
@@ -241,7 +256,9 @@ def patrimoine_list(request):
 
     region_filter = request.GET.get("region", "").strip()
     if region_filter:
-        patrimoines = patrimoines.filter(id_commune__id_province__id_region__id_region=region_filter)
+        patrimoines = patrimoines.filter(
+            id_commune__id_province__id_region__id_region=region_filter
+        )
 
     context = {
         "patrimoines": patrimoines,
@@ -260,52 +277,71 @@ def patrimoine_export(request):
         return redirect("public-map")
 
     # Apply same filters as list view
-    patrimoines = Patrimoine.objects.select_related("id_commune__id_province__id_region").all()
-    
+    patrimoines = Patrimoine.objects.select_related(
+        "id_commune__id_province__id_region"
+    ).all()
+
     search = request.GET.get("search", "").strip()
     if search:
         patrimoines = patrimoines.filter(nom_fr__icontains=search)
-    
+
     type_filter = request.GET.get("type", "").strip()
     if type_filter:
         patrimoines = patrimoines.filter(type_patrimoine=type_filter)
-    
+
     statut_filter = request.GET.get("statut", "").strip()
     if statut_filter:
         patrimoines = patrimoines.filter(statut=statut_filter)
-    
+
     region_filter = request.GET.get("region", "").strip()
     if region_filter:
-        patrimoines = patrimoines.filter(id_commune__id_province__id_region__id_region=region_filter)
-    
+        patrimoines = patrimoines.filter(
+            id_commune__id_province__id_region__id_region=region_filter
+        )
+
     # Create CSV response
-    response = HttpResponse(content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = f'attachment; filename="patrimoines_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
-    response.write('\ufeff')  # UTF-8 BOM for Excel
-    
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = (
+        f'attachment; filename="patrimoines_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    )
+    response.write("\ufeff")  # UTF-8 BOM for Excel
+
     writer = csv.writer(response)
-    writer.writerow([
-        'ID', 'Nom FR', 'Nom AR', 'Type', 'Statut', 'Référence Administrative',
-        'Description', 'Région', 'Province', 'Commune', 
-        'Créé le', 'Modifié le'
-    ])
-    
+    writer.writerow(
+        [
+            "ID",
+            "Nom FR",
+            "Nom AR",
+            "Type",
+            "Statut",
+            "Référence Administrative",
+            "Description",
+            "Région",
+            "Province",
+            "Commune",
+            "Créé le",
+            "Modifié le",
+        ]
+    )
+
     for p in patrimoines:
-        writer.writerow([
-            p.id_patrimoine,
-            p.nom_fr,
-            p.nom_ar or '',
-            p.get_type_patrimoine_display(),
-            p.get_statut_display(),
-            p.reference_administrative or '',
-            p.description or '',
-            p.id_commune.id_province.id_region.nom_region,
-            p.id_commune.id_province.nom_province,
-            p.id_commune.nom_commune,
-            p.created_at.strftime('%Y-%m-%d %H:%M:%S') if p.created_at else '',
-            p.updated_at.strftime('%Y-%m-%d %H:%M:%S') if p.updated_at else '',
-        ])
-    
+        writer.writerow(
+            [
+                p.id_patrimoine,
+                p.nom_fr,
+                p.nom_ar or "",
+                p.get_type_patrimoine_display(),
+                p.get_statut_display(),
+                p.reference_administrative or "",
+                p.description or "",
+                p.id_commune.id_province.id_region.nom_region,
+                p.id_commune.id_province.nom_province,
+                p.id_commune.nom_commune,
+                p.created_at.strftime("%Y-%m-%d %H:%M:%S") if p.created_at else "",
+                p.updated_at.strftime("%Y-%m-%d %H:%M:%S") if p.updated_at else "",
+            ]
+        )
+
     return response
 
 
@@ -316,8 +352,10 @@ def patrimoine_detail(request, id_patrimoine):
         return redirect("public-map")
 
     patrimoine = get_object_or_404(Patrimoine, id_patrimoine=id_patrimoine)
-    images = Document.objects.filter(id_patrimoine=patrimoine, type_document="IMAGE").order_by("uploaded_at")
-    
+    images = Document.objects.filter(
+        id_patrimoine=patrimoine, type_document="IMAGE"
+    ).order_by("uploaded_at")
+
     context = {
         "patrimoine": patrimoine,
         "images": images,
@@ -340,13 +378,20 @@ def patrimoine_create(request):
             description = request.POST.get("description", "").strip()
             type_patrimoine = request.POST.get("type_patrimoine", "").strip()
             statut = request.POST.get("statut", "EN_ETUDE").strip()
-            reference_administrative = request.POST.get("reference_administrative", "").strip()
+            reference_administrative = request.POST.get(
+                "reference_administrative", ""
+            ).strip()
             geojson_str = request.POST.get("geojson", "").strip()
             spatial_file = request.FILES.get("spatial_file")
             id_commune = request.POST.get("id_commune", "").strip()
 
-            if not all([nom_fr, type_patrimoine, id_commune]) or (not geojson_str and not spatial_file):
-                messages.error(request, "Champs obligatoires manquants (Nom, Type, Commune, Polygone)")
+            if not all([nom_fr, type_patrimoine, id_commune]) or (
+                not geojson_str and not spatial_file
+            ):
+                messages.error(
+                    request,
+                    "Champs obligatoires manquants (Nom, Type, Commune, Polygone)",
+                )
                 context = {
                     "regions": Region.objects.all(),
                     "provinces": Province.objects.all(),
@@ -360,17 +405,19 @@ def patrimoine_create(request):
             uploaded_files = request.FILES.getlist("images")
             if len(uploaded_files) > 5:
                 raise ValueError("Maximum 5 images autorisées")
-            
+
             MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB in bytes
-            ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
-            
+            ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+
             for uploaded_file in uploaded_files:
                 if uploaded_file.size > MAX_FILE_SIZE:
                     raise ValueError(f"L'image '{uploaded_file.name}' dépasse 5MB")
-                
+
                 ext = os.path.splitext(uploaded_file.name)[1].lower()
                 if ext not in ALLOWED_EXTENSIONS:
-                    raise ValueError(f"Format non autorisé pour '{uploaded_file.name}'. Formats acceptés: JPG, PNG, GIF, WEBP")
+                    raise ValueError(
+                        f"Format non autorisé pour '{uploaded_file.name}'. Formats acceptés: JPG, PNG, GIF, WEBP"
+                    )
 
             commune = Commune.objects.get(id_commune=id_commune)
             if spatial_file:
@@ -409,10 +456,10 @@ def patrimoine_create(request):
                 # Create directory structure: patrimoine/{patrimoine_id}/
                 file_path = f"patrimoine/{patrimoine_id}/{uploaded_file.name}"
                 saved_path = default_storage.save(file_path, uploaded_file)
-                
+
                 # Calculate file size in MB
                 file_size_mb = Decimal(uploaded_file.size) / Decimal(1024 * 1024)
-                
+
                 # Create Document record
                 document = Document.objects.create(
                     type_document="IMAGE",
@@ -495,30 +542,42 @@ def patrimoine_edit(request, id_patrimoine):
             }
             nom_fr = request.POST.get("nom_fr", patrimoine.nom_fr).strip()
             nom_ar = request.POST.get("nom_ar", patrimoine.nom_ar or "").strip()
-            description = request.POST.get("description", patrimoine.description or "").strip()
-            type_patrimoine = request.POST.get("type_patrimoine", patrimoine.type_patrimoine).strip()
+            description = request.POST.get(
+                "description", patrimoine.description or ""
+            ).strip()
+            type_patrimoine = request.POST.get(
+                "type_patrimoine", patrimoine.type_patrimoine
+            ).strip()
             statut = request.POST.get("statut", patrimoine.statut).strip()
-            reference_administrative = request.POST.get("reference_administrative", patrimoine.reference_administrative or "").strip()
+            reference_administrative = request.POST.get(
+                "reference_administrative", patrimoine.reference_administrative or ""
+            ).strip()
             geojson_str = request.POST.get("geojson", "").strip()
             id_commune = request.POST.get("id_commune", "").strip()
 
             # Validate uploaded files
             uploaded_files = request.FILES.getlist("images")
-            current_images_count = Document.objects.filter(id_patrimoine=patrimoine, type_document="IMAGE").count()
-            
+            current_images_count = Document.objects.filter(
+                id_patrimoine=patrimoine, type_document="IMAGE"
+            ).count()
+
             if current_images_count + len(uploaded_files) > 5:
-                raise ValueError(f"Maximum 5 images au total. Actuellement: {current_images_count}, tentative d'ajout: {len(uploaded_files)}")
-            
+                raise ValueError(
+                    f"Maximum 5 images au total. Actuellement: {current_images_count}, tentative d'ajout: {len(uploaded_files)}"
+                )
+
             MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB in bytes
-            ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
-            
+            ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+
             for uploaded_file in uploaded_files:
                 if uploaded_file.size > MAX_FILE_SIZE:
                     raise ValueError(f"L'image '{uploaded_file.name}' dépasse 5MB")
-                
+
                 ext = os.path.splitext(uploaded_file.name)[1].lower()
                 if ext not in ALLOWED_EXTENSIONS:
-                    raise ValueError(f"Format non autorisé pour '{uploaded_file.name}'. Formats acceptés: JPG, PNG, GIF, WEBP")
+                    raise ValueError(
+                        f"Format non autorisé pour '{uploaded_file.name}'. Formats acceptés: JPG, PNG, GIF, WEBP"
+                    )
 
             # Use raw SQL to avoid GENERATED column issue
             with connection.cursor() as cursor:
@@ -571,12 +630,14 @@ def patrimoine_edit(request, id_patrimoine):
             # Save uploaded images to Document table
             for uploaded_file in uploaded_files:
                 # Create directory structure: patrimoine/{patrimoine_id}/
-                file_path = f"patrimoine/{patrimoine.id_patrimoine}/{uploaded_file.name}"
+                file_path = (
+                    f"patrimoine/{patrimoine.id_patrimoine}/{uploaded_file.name}"
+                )
                 saved_path = default_storage.save(file_path, uploaded_file)
-                
+
                 # Calculate file size in MB
                 file_size_mb = Decimal(uploaded_file.size) / Decimal(1024 * 1024)
-                
+
                 # Create Document record
                 document = Document.objects.create(
                     type_document="IMAGE",
@@ -620,27 +681,47 @@ def patrimoine_edit(request, id_patrimoine):
             return redirect("patrimoine-detail", id_patrimoine=patrimoine.id_patrimoine)
         except Exception as e:
             messages.error(request, str(e))
-            current_images = Document.objects.filter(id_patrimoine=patrimoine, type_document="IMAGE").order_by("uploaded_at")
+            current_images = Document.objects.filter(
+                id_patrimoine=patrimoine, type_document="IMAGE"
+            ).order_by("uploaded_at")
             context = {
                 "patrimoine": patrimoine,
                 "current_images": current_images,
-                "patrimoine_geojson": json.dumps(json.loads(patrimoine.polygon_geom.geojson)) if patrimoine.polygon_geom else "null",
+                "patrimoine_geojson": (
+                    json.dumps(json.loads(patrimoine.polygon_geom.geojson))
+                    if patrimoine.polygon_geom
+                    else "null"
+                ),
                 "regions": Region.objects.all(),
-                "provinces": Province.objects.filter(id_region=patrimoine.id_commune.id_province.id_region),
-                "communes": Commune.objects.filter(id_province=patrimoine.id_commune.id_province),
+                "provinces": Province.objects.filter(
+                    id_region=patrimoine.id_commune.id_province.id_region
+                ),
+                "communes": Commune.objects.filter(
+                    id_province=patrimoine.id_commune.id_province
+                ),
                 "patrimoine_types": Patrimoine.PATRIMOINE_TYPES,
                 "patrimoine_statuts": Patrimoine.PATRIMOINE_STATUTS,
             }
             return render(request, "patrimoine/patrimoine_form.html", context)
 
-    current_images = Document.objects.filter(id_patrimoine=patrimoine, type_document="IMAGE").order_by("uploaded_at")
+    current_images = Document.objects.filter(
+        id_patrimoine=patrimoine, type_document="IMAGE"
+    ).order_by("uploaded_at")
     context = {
         "patrimoine": patrimoine,
         "current_images": current_images,
-        "patrimoine_geojson": json.dumps(json.loads(patrimoine.polygon_geom.geojson)) if patrimoine.polygon_geom else "null",
+        "patrimoine_geojson": (
+            json.dumps(json.loads(patrimoine.polygon_geom.geojson))
+            if patrimoine.polygon_geom
+            else "null"
+        ),
         "regions": Region.objects.all(),
-        "provinces": Province.objects.filter(id_region=patrimoine.id_commune.id_province.id_region),
-        "communes": Commune.objects.filter(id_province=patrimoine.id_commune.id_province),
+        "provinces": Province.objects.filter(
+            id_region=patrimoine.id_commune.id_province.id_region
+        ),
+        "communes": Commune.objects.filter(
+            id_province=patrimoine.id_commune.id_province
+        ),
         "patrimoine_types": Patrimoine.PATRIMOINE_TYPES,
         "patrimoine_statuts": Patrimoine.PATRIMOINE_STATUTS,
     }
@@ -696,13 +777,13 @@ def patrimoine_map(request):
     return render(request, "patrimoine/patrimoine_map.html", context)
 
 
-
-
 @csrf_exempt
 @require_GET
 def api_provinces_by_region(request, id_region):
     """API endpoint: get provinces for a region."""
-    provinces = Province.objects.filter(id_region=id_region).values("id_province", "nom_province")
+    provinces = Province.objects.filter(id_region=id_region).values(
+        "id_province", "nom_province"
+    )
     return JsonResponse(list(provinces), safe=False)
 
 
@@ -710,14 +791,18 @@ def api_provinces_by_region(request, id_region):
 @require_GET
 def api_communes_by_province(request, id_province):
     """API endpoint: get communes for a province."""
-    communes = Commune.objects.filter(id_province=id_province).values("id_commune", "nom_commune")
+    communes = Commune.objects.filter(id_province=id_province).values(
+        "id_commune", "nom_commune"
+    )
     return JsonResponse(list(communes), safe=False)
 
 
 @login_required
 def api_patrimoines_by_commune(request, id_commune):
     """API endpoint: get patrimoines for a commune."""
-    patrimoines = Patrimoine.objects.filter(id_commune=id_commune).values("id_patrimoine", "nom_fr")
+    patrimoines = Patrimoine.objects.filter(id_commune=id_commune).values(
+        "id_patrimoine", "nom_fr"
+    )
     return JsonResponse(list(patrimoines), safe=False)
 
 
@@ -743,7 +828,9 @@ def _is_admin(user):
 @login_required
 def inspection_list(request):
     """List inspections with pending modification requests for Admin."""
-    inspections = Inspection.objects.select_related("id_patrimoine", "id_inspecteur").all()
+    inspections = Inspection.objects.select_related(
+        "id_patrimoine", "id_inspecteur"
+    ).all()
 
     search = request.GET.get("search", "").strip()
     etat_filter = request.GET.get("etat", "").strip()
@@ -767,15 +854,17 @@ def inspection_list(request):
         inspections = inspections.filter(date_inspection__gte=date_from)
     if date_to:
         inspections = inspections.filter(date_inspection__lte=date_to)
-    
+
     # Get pending modification requests for admins
     pending_requests = []
     if _is_admin(request.user):
         pending_requests = InspectionModificationRequest.objects.filter(
             status="PENDING"
         ).select_related("id_inspection__id_patrimoine", "requested_by")
-    
-    inspecteurs = User.objects.filter(groups__name="INSPECTEUR").order_by("email").distinct()
+
+    inspecteurs = (
+        User.objects.filter(groups__name="INSPECTEUR").order_by("email").distinct()
+    )
     patrimoines = Patrimoine.objects.only("id_patrimoine", "nom_fr").order_by("nom_fr")
 
     etat_options = [
@@ -783,7 +872,11 @@ def inspection_list(request):
         for code, label in Inspection.INSPECTION_ETAT
     ]
     inspecteur_options = [
-        {"id": insp.id, "email": insp.email, "selected": str(insp.id) == inspecteur_filter}
+        {
+            "id": insp.id,
+            "email": insp.email,
+            "selected": str(insp.id) == inspecteur_filter,
+        }
         for insp in inspecteurs
     ]
     patrimoine_options = [
@@ -810,8 +903,10 @@ def inspection_list(request):
 @login_required
 def inspection_export(request):
     """Export inspections to CSV."""
-    inspections = Inspection.objects.select_related("id_patrimoine", "id_inspecteur").all()
-    
+    inspections = Inspection.objects.select_related(
+        "id_patrimoine", "id_inspecteur"
+    ).all()
+
     # Apply same filters as list view
     search = request.GET.get("search", "").strip()
     etat_filter = request.GET.get("etat", "").strip()
@@ -819,7 +914,7 @@ def inspection_export(request):
     patrimoine_filter = request.GET.get("patrimoine", "").strip()
     date_from = request.GET.get("date_from", "").strip()
     date_to = request.GET.get("date_to", "").strip()
-    
+
     if search:
         inspections = inspections.filter(
             Q(id_patrimoine__nom_fr__icontains=search)
@@ -835,30 +930,42 @@ def inspection_export(request):
         inspections = inspections.filter(date_inspection__gte=date_from)
     if date_to:
         inspections = inspections.filter(date_inspection__lte=date_to)
-    
+
     # Create CSV response
-    response = HttpResponse(content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = f'attachment; filename="inspections_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
-    response.write('\ufeff')  # UTF-8 BOM for Excel
-    
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = (
+        f'attachment; filename="inspections_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    )
+    response.write("\ufeff")  # UTF-8 BOM for Excel
+
     writer = csv.writer(response)
-    writer.writerow([
-        'ID', 'Patrimoine', 'Inspecteur', 'Date Inspection', 'État', 
-        'Observations', 'Créé le', 'Modifié le'
-    ])
-    
+    writer.writerow(
+        [
+            "ID",
+            "Patrimoine",
+            "Inspecteur",
+            "Date Inspection",
+            "État",
+            "Observations",
+            "Créé le",
+            "Modifié le",
+        ]
+    )
+
     for i in inspections:
-        writer.writerow([
-            i.id_inspection,
-            i.id_patrimoine.nom_fr,
-            i.id_inspecteur.email if i.id_inspecteur else '',
-            i.date_inspection.strftime('%Y-%m-%d') if i.date_inspection else '',
-            i.get_etat_display(),
-            i.observations or '',
-            i.created_at.strftime('%Y-%m-%d %H:%M:%S') if i.created_at else '',
-            i.updated_at.strftime('%Y-%m-%d %H:%M:%S') if i.updated_at else '',
-        ])
-    
+        writer.writerow(
+            [
+                i.id_inspection,
+                i.id_patrimoine.nom_fr,
+                i.id_inspecteur.email if i.id_inspecteur else "",
+                i.date_inspection.strftime("%Y-%m-%d") if i.date_inspection else "",
+                i.get_etat_display(),
+                i.observations or "",
+                i.created_at.strftime("%Y-%m-%d %H:%M:%S") if i.created_at else "",
+                i.updated_at.strftime("%Y-%m-%d %H:%M:%S") if i.updated_at else "",
+            ]
+        )
+
     return response
 
 
@@ -867,21 +974,23 @@ def inspection_detail(request, id_inspection):
     """View inspection details with modification history."""
     inspection = get_object_or_404(
         Inspection.objects.select_related("id_patrimoine", "id_inspecteur"),
-        id_inspection=id_inspection
+        id_inspection=id_inspection,
     )
-    
+
     # Get all modification requests for this inspection
     modification_requests = inspection.modification_requests.select_related(
         "requested_by", "reviewed_by"
     ).order_by("-requested_at")
-    
+
     # Check if inspecteur can request modification
     can_request_modification = (
-        request.user.groups.filter(name="INSPECTEUR").exists() and
-        inspection.id_inspecteur == request.user and
-        not modification_requests.filter(status="PENDING").exists()  # No pending requests
+        request.user.groups.filter(name="INSPECTEUR").exists()
+        and inspection.id_inspecteur == request.user
+        and not modification_requests.filter(
+            status="PENDING"
+        ).exists()  # No pending requests
     )
-    
+
     # Get documents linked to this inspection
     documents = Document.objects.filter(id_inspection=inspection)
     context = {
@@ -901,7 +1010,6 @@ def inspection_create(request):
     if not _can_add_inspection(request.user):
         return redirect("inspection-list")
 
-
     if request.method == "POST":
         try:
             id_patrimoine = request.POST.get("id_patrimoine", "").strip()
@@ -920,9 +1028,19 @@ def inspection_create(request):
             # Handle file uploads (PDF, images, etc.)
             files = request.FILES.getlist("files")
             for f in files:
-                ext = f.name.split('.')[-1].lower()
-                doc_type = "PDF" if ext == "pdf" else ("IMAGE" if ext in ["jpg", "jpeg", "png", "gif", "webp"] else "AUTRE")
-                file_path = default_storage.save(f"patrimoine/inspection/{inspection.id_inspection}/{f.name}", f)
+                ext = f.name.split(".")[-1].lower()
+                doc_type = (
+                    "PDF"
+                    if ext == "pdf"
+                    else (
+                        "IMAGE"
+                        if ext in ["jpg", "jpeg", "png", "gif", "webp"]
+                        else "AUTRE"
+                    )
+                )
+                file_path = default_storage.save(
+                    f"patrimoine/inspection/{inspection.id_inspection}/{f.name}", f
+                )
                 Document.objects.create(
                     type_document=doc_type,
                     file_name=f.name,
@@ -960,15 +1078,15 @@ def inspection_create(request):
 def inspection_request_edit(request, id_inspection):
     """Inspecteur requests modification for their inspection."""
     inspection = get_object_or_404(Inspection, id_inspection=id_inspection)
-    
+
     # Only the inspecteur who created it can request modifications
     if inspection.id_inspecteur != request.user:
         return redirect("inspection-detail", id_inspection=id_inspection)
-    
+
     # Check if there's already a pending request
     if inspection.modification_requests.filter(status="PENDING").exists():
         return redirect("inspection-detail", id_inspection=id_inspection)
-    
+
     if request.method == "POST":
         try:
             # Collect proposed changes
@@ -977,23 +1095,23 @@ def inspection_request_edit(request, id_inspection):
                 "etat": request.POST.get("etat", "").strip(),
                 "observations": request.POST.get("observations", "").strip(),
             }
-            
+
             # Create modification request
             InspectionModificationRequest.objects.create(
                 id_inspection=inspection,
                 requested_by=request.user,
-                proposed_data=proposed_data
+                proposed_data=proposed_data,
             )
-            
+
             return redirect("inspection-detail", id_inspection=id_inspection)
         except Exception as e:
             context = {
                 "inspection": inspection,
                 "inspection_etat": Inspection.INSPECTION_ETAT,
-                "error": str(e)
+                "error": str(e),
             }
             return render(request, "patrimoine/inspection_edit_request.html", context)
-    
+
     context = {
         "inspection": inspection,
         "inspection_etat": Inspection.INSPECTION_ETAT,
@@ -1007,12 +1125,14 @@ def inspection_request_approve(request, id_request):
     """Admin approves modification request and applies changes."""
     if not _is_admin(request.user):
         return redirect("inspection-list")
-    
-    mod_request = get_object_or_404(InspectionModificationRequest, id_request=id_request)
-    
+
+    mod_request = get_object_or_404(
+        InspectionModificationRequest, id_request=id_request
+    )
+
     if mod_request.status != "PENDING":
         return redirect("inspection-list")
-    
+
     try:
         # Apply proposed changes to inspection using raw SQL to avoid auto-updated_at trigger issues
         inspection = mod_request.id_inspection
@@ -1022,15 +1142,20 @@ def inspection_request_approve(request, id_request):
             "observations": inspection.observations,
         }
         proposed = mod_request.proposed_data
-        
+
         with connection.cursor() as cursor:
             cursor.execute(
                 """UPDATE inspection 
                    SET date_inspection = %s, etat = %s, observations = %s, updated_at = NOW()
                    WHERE id_inspection = %s""",
-                [proposed['date_inspection'], proposed['etat'], proposed.get('observations', ''), inspection.id_inspection]
+                [
+                    proposed["date_inspection"],
+                    proposed["etat"],
+                    proposed.get("observations", ""),
+                    inspection.id_inspection,
+                ],
             )
-        
+
         # Update request status
         mod_request.status = "APPROVED"
         mod_request.reviewed_by = request.user
@@ -1060,7 +1185,7 @@ def inspection_request_approve(request, id_request):
                 "observations": proposed.get("observations"),
             },
         )
-        
+
         return redirect("inspection-detail", id_inspection=inspection.id_inspection)
     except Exception as e:
         return redirect("inspection-list")
@@ -1072,12 +1197,14 @@ def inspection_request_reject(request, id_request):
     """Admin rejects modification request."""
     if not _is_admin(request.user):
         return redirect("inspection-list")
-    
-    mod_request = get_object_or_404(InspectionModificationRequest, id_request=id_request)
-    
+
+    mod_request = get_object_or_404(
+        InspectionModificationRequest, id_request=id_request
+    )
+
     if mod_request.status != "PENDING":
         return redirect("inspection-list")
-    
+
     mod_request.status = "REJECTED"
     mod_request.reviewed_by = request.user
     mod_request.reviewed_at = timezone.now()
@@ -1094,8 +1221,10 @@ def inspection_request_reject(request, id_request):
             "admin_note": mod_request.admin_note,
         },
     )
-    
-    return redirect("inspection-detail", id_inspection=mod_request.id_inspection.id_inspection)
+
+    return redirect(
+        "inspection-detail", id_inspection=mod_request.id_inspection.id_inspection
+    )
 
 
 # ====================== INTERVENTIONS ======================
@@ -1104,7 +1233,9 @@ def intervention_list(request):
     """List interventions."""
     if not _can_edit(request.user):
         return redirect("patrimoine-list")
-    interventions = Intervention.objects.select_related("id_patrimoine", "created_by").order_by("-created_at")
+    interventions = Intervention.objects.select_related(
+        "id_patrimoine", "created_by"
+    ).order_by("-created_at")
 
     search = request.GET.get("search", "").strip()
     type_filter = request.GET.get("type", "").strip()
@@ -1140,16 +1271,18 @@ def intervention_export(request):
     """Export interventions to CSV."""
     if not _can_edit(request.user):
         return redirect("patrimoine-list")
-    
-    interventions = Intervention.objects.select_related("id_patrimoine", "created_by").order_by("-created_at")
-    
+
+    interventions = Intervention.objects.select_related(
+        "id_patrimoine", "created_by"
+    ).order_by("-created_at")
+
     # Apply same filters as list view
     search = request.GET.get("search", "").strip()
     type_filter = request.GET.get("type", "").strip()
     statut_filter = request.GET.get("statut", "").strip()
     date_from = request.GET.get("date_from", "").strip()
     date_to = request.GET.get("date_to", "").strip()
-    
+
     if search:
         interventions = interventions.filter(
             Q(nom_projet__icontains=search)
@@ -1164,35 +1297,50 @@ def intervention_export(request):
         interventions = interventions.filter(date_debut__gte=date_from)
     if date_to:
         interventions = interventions.filter(date_debut__lte=date_to)
-    
+
     # Create CSV response
-    response = HttpResponse(content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = f'attachment; filename="interventions_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
-    response.write('\ufeff')  # UTF-8 BOM for Excel
-    
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = (
+        f'attachment; filename="interventions_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    )
+    response.write("\ufeff")  # UTF-8 BOM for Excel
+
     writer = csv.writer(response)
-    writer.writerow([
-        'ID', 'Patrimoine', 'Nom Projet', 'Type', 'Statut', 'Date Début', 
-        'Date Fin', 'Prestataire', 'Description', 'Créé par', 
-        'Créé le', 'Modifié le'
-    ])
-    
+    writer.writerow(
+        [
+            "ID",
+            "Patrimoine",
+            "Nom Projet",
+            "Type",
+            "Statut",
+            "Date Début",
+            "Date Fin",
+            "Prestataire",
+            "Description",
+            "Créé par",
+            "Créé le",
+            "Modifié le",
+        ]
+    )
+
     for i in interventions:
-        writer.writerow([
-            i.id_intervention,
-            i.id_patrimoine.nom_fr,
-            i.nom_projet,
-            i.get_type_intervention_display(),
-            i.get_statut_display(),
-            i.date_debut.strftime('%Y-%m-%d') if i.date_debut else '',
-            i.date_fin.strftime('%Y-%m-%d') if i.date_fin else '',
-            i.prestataire or '',
-            i.description or '',
-            i.created_by.email if i.created_by else '',
-            i.created_at.strftime('%Y-%m-%d %H:%M:%S') if i.created_at else '',
-            i.updated_at.strftime('%Y-%m-%d %H:%M:%S') if i.updated_at else '',
-        ])
-    
+        writer.writerow(
+            [
+                i.id_intervention,
+                i.id_patrimoine.nom_fr,
+                i.nom_projet,
+                i.get_type_intervention_display(),
+                i.get_statut_display(),
+                i.date_debut.strftime("%Y-%m-%d") if i.date_debut else "",
+                i.date_fin.strftime("%Y-%m-%d") if i.date_fin else "",
+                i.prestataire or "",
+                i.description or "",
+                i.created_by.email if i.created_by else "",
+                i.created_at.strftime("%Y-%m-%d %H:%M:%S") if i.created_at else "",
+                i.updated_at.strftime("%Y-%m-%d %H:%M:%S") if i.updated_at else "",
+            ]
+        )
+
     return response
 
 
@@ -1333,10 +1481,16 @@ def intervention_edit(request, id_intervention):
         try:
             if not form_data["id_patrimoine"]:
                 raise ValueError("Veuillez sélectionner un patrimoine")
-            if not form_data["nom_projet"] or not form_data["type_intervention"] or not form_data["date_debut"]:
+            if (
+                not form_data["nom_projet"]
+                or not form_data["type_intervention"]
+                or not form_data["date_debut"]
+            ):
                 raise ValueError("Champs obligatoires manquants")
 
-            patrimoine = Patrimoine.objects.get(id_patrimoine=form_data["id_patrimoine"])
+            patrimoine = Patrimoine.objects.get(
+                id_patrimoine=form_data["id_patrimoine"]
+            )
             intervention.id_patrimoine = patrimoine
             intervention.nom_projet = form_data["nom_projet"]
             intervention.type_intervention = form_data["type_intervention"]
@@ -1366,7 +1520,9 @@ def intervention_edit(request, id_intervention):
             )
 
             messages.success(request, "Intervention mise à jour avec succès")
-            return redirect("intervention-detail", id_intervention=intervention.id_intervention)
+            return redirect(
+                "intervention-detail", id_intervention=intervention.id_intervention
+            )
         except Exception as e:
             messages.error(request, str(e))
             context = {
@@ -1381,14 +1537,20 @@ def intervention_edit(request, id_intervention):
             return render(request, "patrimoine/intervention_form.html", context)
 
     form_data = {
-        "id_region": str(intervention.id_patrimoine.id_commune.id_province.id_region.id_region),
-        "id_province": str(intervention.id_patrimoine.id_commune.id_province.id_province),
+        "id_region": str(
+            intervention.id_patrimoine.id_commune.id_province.id_region.id_region
+        ),
+        "id_province": str(
+            intervention.id_patrimoine.id_commune.id_province.id_province
+        ),
         "id_commune": str(intervention.id_patrimoine.id_commune.id_commune),
         "id_patrimoine": str(intervention.id_patrimoine.id_patrimoine),
         "nom_projet": intervention.nom_projet,
         "type_intervention": intervention.type_intervention,
         "statut": intervention.statut,
-        "date_debut": intervention.date_debut.isoformat() if intervention.date_debut else "",
+        "date_debut": (
+            intervention.date_debut.isoformat() if intervention.date_debut else ""
+        ),
         "date_fin": intervention.date_fin.isoformat() if intervention.date_fin else "",
         "prestataire": intervention.prestataire or "",
         "description": intervention.description or "",
@@ -1424,7 +1586,9 @@ def intervention_delete(request, id_intervention):
         "description": intervention.description,
     }
     intervention.delete()
-    _log_audit(request.user, "DELETE", "INTERVENTION", id_intervention, old_data=old_data)
+    _log_audit(
+        request.user, "DELETE", "INTERVENTION", id_intervention, old_data=old_data
+    )
     messages.success(request, "Intervention supprimée avec succès")
     return redirect("intervention-list")
 
@@ -1442,8 +1606,7 @@ def document_list(request):
 
     if search:
         documents = documents.filter(
-            Q(file_name__icontains=search)
-            | Q(uploaded_by__email__icontains=search)
+            Q(file_name__icontains=search) | Q(uploaded_by__email__icontains=search)
         )
     if type_filter:
         documents = documents.filter(type_document=type_filter)
@@ -1469,27 +1632,41 @@ def document_delete(request, id_document):
         "type_document": document.type_document,
         "file_name": document.file_name,
         "file_size_mb": document.file_size_mb,
-        "id_patrimoine": document.id_patrimoine.id_patrimoine if document.id_patrimoine else None,
-        "id_inspection": document.id_inspection.id_inspection if document.id_inspection else None,
-        "id_intervention": document.id_intervention.id_intervention if document.id_intervention else None,
+        "id_patrimoine": (
+            document.id_patrimoine.id_patrimoine if document.id_patrimoine else None
+        ),
+        "id_inspection": (
+            document.id_inspection.id_inspection if document.id_inspection else None
+        ),
+        "id_intervention": (
+            document.id_intervention.id_intervention
+            if document.id_intervention
+            else None
+        ),
     }
-    
+
     # Only creator, admin, or superadmin can delete
-    if not (request.user.is_superuser or 
-            request.user.groups.filter(name="ADMIN").exists() or 
-            document.uploaded_by == request.user):
-        return redirect("patrimoine-detail", id_patrimoine=document.id_patrimoine.id_patrimoine)
-    
-    patrimoine_id = document.id_patrimoine.id_patrimoine if document.id_patrimoine else None
-    
+    if not (
+        request.user.is_superuser
+        or request.user.groups.filter(name="ADMIN").exists()
+        or document.uploaded_by == request.user
+    ):
+        return redirect(
+            "patrimoine-detail", id_patrimoine=document.id_patrimoine.id_patrimoine
+        )
+
+    patrimoine_id = (
+        document.id_patrimoine.id_patrimoine if document.id_patrimoine else None
+    )
+
     # Delete physical file
     if document.file_path and default_storage.exists(document.file_path):
         default_storage.delete(document.file_path)
-    
+
     # Delete database record
     document.delete()
     _log_audit(request.user, "DELETE", "DOCUMENT", id_document, old_data=old_data)
-    
+
     if patrimoine_id:
         return redirect("patrimoine-detail", id_patrimoine=patrimoine_id)
     return redirect("document-list")
@@ -1519,7 +1696,9 @@ def user_management(request):
         elif User.objects.filter(username=username).exists():
             error = "Ce nom d'utilisateur est déjà utilisé."
         else:
-            new_user = User.objects.create_user(username=username, email=email, password=password)
+            new_user = User.objects.create_user(
+                username=username, email=email, password=password
+            )
             new_user.is_active = True
             new_user.is_staff = role == "ADMIN"
             new_user.save()
@@ -1545,10 +1724,19 @@ def user_management(request):
             )
             try:
                 _send_welcome_user_email(request, new_user, password, role)
-                logger.info("Welcome email accepted by SMTP for user_id=%s email=%s", new_user.id, new_user.email)
+                logger.info(
+                    "Welcome email accepted by SMTP for user_id=%s email=%s",
+                    new_user.id,
+                    new_user.email,
+                )
                 success = "Utilisateur créé avec succès. Email de bienvenue envoyé."
             except Exception as exc:
-                logger.exception("Welcome email failed for user_id=%s email=%s error=%s", new_user.id, new_user.email, exc)
+                logger.exception(
+                    "Welcome email failed for user_id=%s email=%s error=%s",
+                    new_user.id,
+                    new_user.email,
+                    exc,
+                )
                 success = "Utilisateur créé avec succès. Email non envoyé (vérifiez la configuration SMTP)."
 
     users = User.objects.all().prefetch_related("groups")
@@ -1627,11 +1815,24 @@ def edit_user(request, user_id):
                 role=role,
                 raw_password=new_password or None,
             )
-            logger.info("Update notification email accepted by SMTP for user_id=%s email=%s", target_user.id, target_user.email)
-            messages.success(request, "Utilisateur modifié. Email de notification envoyé.")
+            logger.info(
+                "Update notification email accepted by SMTP for user_id=%s email=%s",
+                target_user.id,
+                target_user.email,
+            )
+            messages.success(
+                request, "Utilisateur modifié. Email de notification envoyé."
+            )
         except Exception as exc:
-            logger.exception("Update notification email failed for user_id=%s email=%s error=%s", target_user.id, target_user.email, exc)
-            messages.warning(request, "Utilisateur modifié. Email de notification non envoyé.")
+            logger.exception(
+                "Update notification email failed for user_id=%s email=%s error=%s",
+                target_user.id,
+                target_user.email,
+                exc,
+            )
+            messages.warning(
+                request, "Utilisateur modifié. Email de notification non envoyé."
+            )
 
         return redirect("user-management")
 
@@ -1688,7 +1889,9 @@ def update_user_email(request, user_id):
     user.email = new_email
     user.save(update_fields=["email"])
 
-    messages.success(request, f"Email mis à jour pour {user.username} : {old_email} → {new_email}")
+    messages.success(
+        request, f"Email mis à jour pour {user.username} : {old_email} → {new_email}"
+    )
     return redirect("user-management")
 
 
@@ -1706,7 +1909,9 @@ def delete_user(request, user_id):
         return redirect("user-management")
 
     if user.is_superuser:
-        messages.error(request, "Suppression d'un superadmin non autorisée depuis cet écran.")
+        messages.error(
+            request, "Suppression d'un superadmin non autorisée depuis cet écran."
+        )
         return redirect("user-management")
 
     username = user.username
@@ -1724,8 +1929,21 @@ def delete_user(request, user_id):
         new_data=None,
         created_at=timezone.now(),
     )
-    user.delete()
-    messages.success(request, f"Utilisateur supprimé: {username}")
+    try:
+        user.delete()
+        messages.success(request, f"Utilisateur supprimé: {username}")
+    except (ProtectedError, IntegrityError):
+        # The user is referenced by business records (inspections, interventions, docs, audit, etc.).
+        # Disable account instead of hard delete to avoid breaking FK integrity.
+        user.is_active = False
+        user.is_staff = False
+        user.set_unusable_password()
+        user.save(update_fields=["is_active", "is_staff", "password"])
+        user.groups.clear()
+        messages.warning(
+            request,
+            f"Utilisateur désactivé (suppression impossible car des données y sont liées): {username}",
+        )
     return redirect("user-management")
 
 
@@ -1756,16 +1974,16 @@ def audit_log(request):
         logs = logs.filter(created_at__date__lte=date_to)
 
     action_choices = (
-        AuditLog.objects.values_list("action", flat=True)
-        .distinct()
-        .order_by("action")
+        AuditLog.objects.values_list("action", flat=True).distinct().order_by("action")
     )
     entity_choices = (
         AuditLog.objects.values_list("entity_type", flat=True)
         .distinct()
         .order_by("entity_type")
     )
-    actor_choices = User.objects.filter(id__in=AuditLog.objects.values_list("actor_id", flat=True).distinct()).order_by("email")
+    actor_choices = User.objects.filter(
+        id__in=AuditLog.objects.values_list("actor_id", flat=True).distinct()
+    ).order_by("email")
 
     context = {
         "logs": logs[:300],
@@ -1781,4 +1999,3 @@ def audit_log(request):
         },
     }
     return render(request, "core/audit_log.html", context)
-

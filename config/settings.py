@@ -12,6 +12,18 @@ DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
 allowed_hosts_raw = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_raw.split(",") if host.strip()]
 
+csrf_trusted_origins_raw = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "")
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip() for origin in csrf_trusted_origins_raw.split(",") if origin.strip()
+]
+
+railway_public_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+if railway_public_domain:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{railway_public_domain}")
+
+# Keep the list stable and avoid duplicates when both env vars include the same domain.
+CSRF_TRUSTED_ORIGINS = sorted(set(CSRF_TRUSTED_ORIGINS))
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -117,5 +129,13 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL", "Patrimoine <noreply@belfellah.space>"
 )
+
+# Railway/Reverse proxies forward scheme in this header.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

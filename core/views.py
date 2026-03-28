@@ -1,14 +1,19 @@
 import json
+import logging
 
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
 from django.contrib.auth.views import LoginView
+from django.db import DatabaseError
 from django.db.models import Count
 from django.shortcuts import redirect, render
 
 from .forms import EmailAuthenticationForm
 from patrimoine.models import Inspection, Intervention, Patrimoine, Region
+
+
+logger = logging.getLogger(__name__)
 
 
 class UserLoginView(LoginView):
@@ -51,7 +56,9 @@ def dashboard_router_view(request):
 def superadmin_view(request):
     if not request.user.is_superuser:
         return redirect("dashboard")
-    return render(request, "core/dashboard_analytics.html", _dashboard_context(request.user))
+    return render(
+        request, "core/dashboard_analytics.html", _dashboard_context(request.user)
+    )
 
 
 @login_required
@@ -60,7 +67,9 @@ def admin_view(request):
         return redirect("dashboard-superadmin")
     if not request.user.groups.filter(name="ADMIN").exists():
         return redirect("dashboard")
-    return render(request, "core/dashboard_analytics.html", _dashboard_context(request.user))
+    return render(
+        request, "core/dashboard_analytics.html", _dashboard_context(request.user)
+    )
 
 
 @login_required
@@ -71,68 +80,90 @@ def inspecteur_view(request):
         return redirect("dashboard-admin")
     if not request.user.groups.filter(name="INSPECTEUR").exists():
         return redirect("dashboard")
-    
+
     # Statistics for inspecteur
     my_inspections = Inspection.objects.filter(id_inspecteur=request.user)
     my_inspections_count = my_inspections.count()
     total_patrimoines = Patrimoine.objects.count()
-    
+
     # Patrimoines inspected by this inspecteur
-    inspected_patrimoines = Patrimoine.objects.filter(
-        inspection__id_inspecteur=request.user
-    ).distinct().order_by('-inspection__date_inspection')[:10]
-    
+    inspected_patrimoines = (
+        Patrimoine.objects.filter(inspection__id_inspecteur=request.user)
+        .distinct()
+        .order_by("-inspection__date_inspection")[:10]
+    )
+
     # Recent inspections
-    recent_inspections = my_inspections.select_related('id_patrimoine').order_by('-date_inspection')[:5]
-    
+    recent_inspections = my_inspections.select_related("id_patrimoine").order_by(
+        "-date_inspection"
+    )[:5]
+
     context = {
-        'my_inspections_count': my_inspections_count,
-        'total_patrimoines': total_patrimoines,
-        'inspected_patrimoines': inspected_patrimoines,
-        'recent_inspections': recent_inspections,
+        "my_inspections_count": my_inspections_count,
+        "total_patrimoines": total_patrimoines,
+        "inspected_patrimoines": inspected_patrimoines,
+        "recent_inspections": recent_inspections,
     }
-    
+
     return render(request, "core/dashboard_inspecteur.html", context)
 
 
 @login_required
 def public_dashboard_view(request):
-    if request.user.is_superuser or request.user.groups.filter(name__in=["ADMIN", "INSPECTEUR"]).exists():
+    if (
+        request.user.is_superuser
+        or request.user.groups.filter(name__in=["ADMIN", "INSPECTEUR"]).exists()
+    ):
         return redirect("dashboard")
     return render(request, "core/dashboard_public.html")
 
 
 def public_map_view(request):
-    patrimoines = Patrimoine.objects.select_related(
-        "id_commune__id_province__id_region"
-    ).all()
-
     data = []
-    for p in patrimoines:
-        region = p.id_commune.id_province.id_region
-        province = p.id_commune.id_province
-        commune = p.id_commune
-        geom = json.loads(p.polygon_geom.geojson) if p.polygon_geom else None
-        data.append(
-            {
-                "id": p.id_patrimoine,
-                "nom": p.nom_fr,
-                "type": p.type_patrimoine,
-                "statut": p.statut,
-                "type_label": p.get_type_patrimoine_display(),
-                "statut_label": p.get_statut_display(),
-                "region_id": region.id_region,
-                "region_name": region.nom_region,
-                "province_name": province.nom_province,
-                "commune_name": commune.nom_commune,
-                "full_location": p.full_location,
-                "geom": geom,
-            }
-        )
+    regions = Region.objects.none()
+
+    try:
+        patrimoines = Patrimoine.objects.select_related(
+            "id_commune__id_province__id_region"
+        ).all()
+
+        for p in patrimoines:
+            if (
+                not p.id_commune
+                or not p.id_commune.id_province
+                or not p.id_commune.id_province.id_region
+            ):
+                continue
+
+            region = p.id_commune.id_province.id_region
+            province = p.id_commune.id_province
+            commune = p.id_commune
+            geom = json.loads(p.polygon_geom.geojson) if p.polygon_geom else None
+            data.append(
+                {
+                    "id": p.id_patrimoine,
+                    "nom": p.nom_fr,
+                    "type": p.type_patrimoine,
+                    "statut": p.statut,
+                    "type_label": p.get_type_patrimoine_display(),
+                    "statut_label": p.get_statut_display(),
+                    "region_id": region.id_region,
+                    "region_name": region.nom_region,
+                    "province_name": province.nom_province,
+                    "commune_name": commune.nom_commune,
+                    "full_location": p.full_location,
+                    "geom": geom,
+                }
+            )
+
+        regions = Region.objects.all()
+    except DatabaseError:
+        # Keep home page available even when target DB schema/data is incomplete.
+        logger.exception("Unable to load public map data from database")
 
     context = {
         "patrimoines_json": json.dumps(data),
-        "regions": Region.objects.all(),
+        "regions": regions,
         "patrimoine_types": Patrimoine.PATRIMOINE_TYPES,
         "patrimoine_statuts": Patrimoine.PATRIMOINE_STATUTS,
     }
@@ -171,7 +202,9 @@ def _dashboard_context(user):
     )
 
     centroids = []
-    for p in Patrimoine.objects.exclude(centroid_geom__isnull=True).only("id_patrimoine", "nom_fr", "type_patrimoine", "centroid_geom")[:1000]:
+    for p in Patrimoine.objects.exclude(centroid_geom__isnull=True).only(
+        "id_patrimoine", "nom_fr", "type_patrimoine", "centroid_geom"
+    )[:1000]:
         if not p.centroid_geom:
             continue
         geo = json.loads(p.centroid_geom.geojson)

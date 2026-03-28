@@ -171,51 +171,63 @@ def public_map_view(request):
 
 
 def _dashboard_context(user):
-    total_patrimoines = Patrimoine.objects.count()
-    total_inspections = Inspection.objects.count()
-    total_interventions = Intervention.objects.count()
+    try:
+        total_patrimoines = Patrimoine.objects.count()
+        total_inspections = Inspection.objects.count()
+        total_interventions = Intervention.objects.count()
 
-    by_type = list(
-        Patrimoine.objects.values("type_patrimoine")
-        .annotate(total=Count("id_patrimoine"))
-        .order_by("type_patrimoine")
-    )
-    by_statut = list(
-        Patrimoine.objects.values("statut")
-        .annotate(total=Count("id_patrimoine"))
-        .order_by("statut")
-    )
-    by_region = list(
-        Patrimoine.objects.values("id_commune__id_province__id_region__nom_region")
-        .annotate(total=Count("id_patrimoine"))
-        .order_by("id_commune__id_province__id_region__nom_region")
-    )
-    inspection_state = list(
-        Inspection.objects.values("etat")
-        .annotate(total=Count("id_inspection"))
-        .order_by("etat")
-    )
-    intervention_status = list(
-        Intervention.objects.values("statut")
-        .annotate(total=Count("id_intervention"))
-        .order_by("statut")
-    )
-
-    centroids = []
-    for p in Patrimoine.objects.exclude(centroid_geom__isnull=True).only(
-        "id_patrimoine", "nom_fr", "type_patrimoine", "centroid_geom"
-    )[:1000]:
-        if not p.centroid_geom:
-            continue
-        geo = json.loads(p.centroid_geom.geojson)
-        centroids.append(
-            {
-                "id": p.id_patrimoine,
-                "nom": p.nom_fr,
-                "type": p.type_patrimoine,
-                "coords": geo.get("coordinates", []),
-            }
+        by_type = list(
+            Patrimoine.objects.values("type_patrimoine")
+            .annotate(total=Count("id_patrimoine"))
+            .order_by("type_patrimoine")
         )
+        by_statut = list(
+            Patrimoine.objects.values("statut")
+            .annotate(total=Count("id_patrimoine"))
+            .order_by("statut")
+        )
+        by_region = list(
+            Patrimoine.objects.values("id_commune__id_province__id_region__nom_region")
+            .annotate(total=Count("id_patrimoine"))
+            .order_by("id_commune__id_province__id_region__nom_region")
+        )
+        inspection_state = list(
+            Inspection.objects.values("etat")
+            .annotate(total=Count("id_inspection"))
+            .order_by("etat")
+        )
+        intervention_status = list(
+            Intervention.objects.values("statut")
+            .annotate(total=Count("id_intervention"))
+            .order_by("statut")
+        )
+
+        centroids = []
+        for p in Patrimoine.objects.exclude(centroid_geom__isnull=True).only(
+            "id_patrimoine", "nom_fr", "type_patrimoine", "centroid_geom"
+        )[:1000]:
+            if not p.centroid_geom:
+                continue
+            geo = json.loads(p.centroid_geom.geojson)
+            centroids.append(
+                {
+                    "id": p.id_patrimoine,
+                    "nom": p.nom_fr,
+                    "type": p.type_patrimoine,
+                    "coords": geo.get("coordinates", []),
+                }
+            )
+    except DatabaseError:
+        logger.exception("Unable to load dashboard analytics data from database")
+        total_patrimoines = 0
+        total_inspections = 0
+        total_interventions = 0
+        by_type = []
+        by_statut = []
+        by_region = []
+        inspection_state = []
+        intervention_status = []
+        centroids = []
 
     return {
         "is_superadmin": user.is_superuser,

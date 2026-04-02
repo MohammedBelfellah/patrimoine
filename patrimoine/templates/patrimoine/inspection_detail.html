@@ -21,7 +21,7 @@
         </span>
         {{ doc.file_name }}
         <span style="color: #6b7280; font-size: 0.95rem;">({{ doc.type_document }}, {{ doc.file_size_mb }} MB)</span>
-        <a href="/media/{{ doc.file_path }}" target="_blank" class="btn btn-sm btn-primary" style="margin-left: 12px;">
+        <a href="{{ MEDIA_URL }}{{ doc.file_path }}" target="_blank" class="btn btn-sm btn-primary" style="margin-left: 12px;">
           <i class="bi bi-eye"></i> Ouvrir
         </a>
       </li>
@@ -82,11 +82,11 @@
       {% for doc in documents %}
       <li style="margin-bottom: 10px;">
         {% if doc.type_document == "PDF" %}
-          <a href="/media/{{ doc.file_path }}" target="_blank" style="color: #dc2626; font-weight: bold;">
+          <a href="{{ MEDIA_URL }}{{ doc.file_path }}" target="_blank" style="color: #dc2626; font-weight: bold;">
             <i class="bi bi-file-earmark-pdf"></i> {{ doc.file_name }}
           </a>
         {% else %}
-          <a href="/media/{{ doc.file_path }}" target="_blank">
+          <a href="{{ MEDIA_URL }}{{ doc.file_path }}" target="_blank">
             <i class="bi bi-file-earmark"></i> {{ doc.file_name }}
           </a>
         {% endif %}

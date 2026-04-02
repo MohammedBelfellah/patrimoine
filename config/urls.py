@@ -18,11 +18,13 @@ urlpatterns = [
 ]
 
 # Static: WhiteNoise serves STATIC_ROOT in production; django helper is for local dev parity.
+# Media: /media/ only when files live on disk. Supabase Storage uses full MEDIA_URL to the bucket (no mount needed).
+_use_disk_media = not getattr(settings, "USE_SUPABASE_MEDIA", False)
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-else:
-    # User uploads (MEDIA_ROOT). Railway disk is ephemeral — prefer object storage for production durability.
+    if _use_disk_media and settings.MEDIA_URL.startswith("/"):
+        urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+elif _use_disk_media:
     urlpatterns += [
         re_path(
             r"^media/(?P<path>.*)$",

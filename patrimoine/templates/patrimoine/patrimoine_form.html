@@ -140,7 +140,7 @@
           style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 8px;">
           {% for image in current_images %}
           <div style="border: 2px solid #e5e7eb; border-radius: 8px; overflow: hidden; position: relative;">
-            <img src="/media/{{ image.file_path }}" alt="{{ image.file_name }}"
+            <img src="{{ MEDIA_URL }}{{ image.file_path }}" alt="{{ image.file_name }}"
               style="width: 100%; height: 100px; object-fit: cover;">
             <div style="padding: 4px; background: white; font-size: 10px; color: #666; text-align: center;">{{
               image.file_name|truncatechars:15 }}</div>

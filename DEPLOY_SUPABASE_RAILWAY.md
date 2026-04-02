@@ -84,18 +84,37 @@ Deploy steps:
 3. Add the environment variables listed above.
 4. Trigger deploy.
 
-## 4.1) Static logo + uploaded images (`/static/` and `/media/`)
+## 4.1) Static logo vs uploaded images
 
-In production, **WhiteNoise** serves collected static files (e.g. the navbar logo under `/static/...`). **`/media/`** is served by Django from `MEDIA_ROOT` so patrimoine images and PDFs resolve after deploy (this was previously 404 when `DEBUG=0` because only dev URLs mounted `/media/`).
+- **Logo (`/static/...`)**: collected by `collectstatic` and served by **WhiteNoise**.
+- **Uploads (`patrimoine/...` in DB)**: on Railway the container disk is **ephemeral**. If you do **not** configure object storage, `/media/...` URLs often return **404** after a redeploy or when the file was never on that instance—the row in Postgres still points at a path that no longer exists on disk.
 
-## 4.2) Persistent media files (important)
+## 4.2) Supabase Storage for uploads (recommended on Railway)
 
-Railway container filesystem is ephemeral. If users upload files and you keep local `MEDIA_ROOT` only, files can be **lost on restart/redeploy** even though URLs work.
+Use the **same Supabase project** as Postgres: create a bucket, allow **public read** for that bucket (so image/PDF links work in the browser), then create **S3-compatible access keys** (Supabase Dashboard → **Project Settings → Storage**; naming may vary by dashboard version).
 
-Use one of these options before production:
-1. Store uploads in Supabase Storage (recommended if you already use Supabase).
-2. Store uploads in S3-compatible object storage.
-3. Do not go live with user uploads until persistent storage is configured.
+Add these **Railway variables** (in addition to `DATABASE_URL`):
+
+| Variable | Value |
+|----------|--------|
+| `SUPABASE_URL` | Project URL, e.g. `https://YOUR_PROJECT_REF.supabase.co` (Settings → API → **Project URL**—not the Postgres host) |
+| `SUPABASE_STORAGE_BUCKET` | Bucket name (e.g. `patrimoine-media`) |
+| `SUPABASE_S3_ACCESS_KEY_ID` | S3 access key from Supabase Storage settings |
+| `SUPABASE_S3_SECRET_ACCESS_KEY` | S3 secret key |
+
+Optional: `AWS_S3_REGION_NAME` if uploads fail (try `us-east-1` or your region).
+
+When these four variables are set, Django stores files in the bucket and templates use a full **`MEDIA_URL`** (`…/object/public/<bucket>/…`), so links survive redeploys.
+
+**After enabling Storage:** upload the files again (or re-sync), because old rows still point at paths that only existed on the old container disk.
+
+## 4.3) Alternative: Railway volume
+
+You can attach a **Railway volume** mounted at `/app/media` instead of Supabase Storage. Files persist for that service until you remove the volume. You must not set the `SUPABASE_*` Storage variables above, so the app keeps using disk + `/media/` URLs.
+
+## 4.4) Local development
+
+Omit the Storage variables; the app uses `MEDIA_ROOT` under `./media` and `/media/` URLs as before.
 
 ## 5) Verify Health
 
@@ -130,6 +149,10 @@ Also verify:
 5. Intermittent DNS errors to Supabase host:
 - Prefer direct DB host URL (db.<project-ref>.supabase.co) when possible.
 - Recreate web container/service after env change.
+
+6. Uploaded images/PDFs return **404 Not Found** on `/media/...`:
+- Railway’s disk is ephemeral: files disappear on redeploy unless you use **Supabase Storage** (see §4.2) or a **Railway volume** (§4.3).
+- After switching to Storage, **re-upload** (or copy) files so the bucket contains the objects for existing `file_path` values in the database.
 
 ## 8) Rollback plan (minimum)
 

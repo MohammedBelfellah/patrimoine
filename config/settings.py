@@ -148,14 +148,49 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-if WHITENOISE_AVAILABLE:
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-else:
-    STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 
-# Media files (uploads)
-MEDIA_URL = "/media/"
+_staticfiles_backend = (
+    "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    if WHITENOISE_AVAILABLE
+    else "django.contrib.staticfiles.storage.StaticFilesStorage"
+)
+
+# Supabase project URL (Dashboard → Settings → API → Project URL), not the Postgres host.
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
+SUPABASE_STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "").strip()
+SUPABASE_S3_ACCESS_KEY_ID = os.getenv("SUPABASE_S3_ACCESS_KEY_ID", "").strip()
+SUPABASE_S3_SECRET_ACCESS_KEY = os.getenv("SUPABASE_S3_SECRET_ACCESS_KEY", "").strip()
+
+USE_SUPABASE_MEDIA = bool(
+    SUPABASE_URL
+    and SUPABASE_STORAGE_BUCKET
+    and SUPABASE_S3_ACCESS_KEY_ID
+    and SUPABASE_S3_SECRET_ACCESS_KEY
+)
+
+# Media files (uploads): local /media/ by default; optional Supabase Storage on Railway.
 MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
+
+if USE_SUPABASE_MEDIA:
+    AWS_ACCESS_KEY_ID = SUPABASE_S3_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY = SUPABASE_S3_SECRET_ACCESS_KEY
+    AWS_STORAGE_BUCKET_NAME = SUPABASE_STORAGE_BUCKET
+    AWS_S3_ENDPOINT_URL = f"{SUPABASE_URL}/storage/v1/s3"
+    AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "us-east-1")
+    AWS_S3_ADDRESSING_STYLE = "path"
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = False
+    AWS_S3_VERIFY = True
+    MEDIA_URL = (
+        f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_STORAGE_BUCKET}/"
+    )
+    STORAGES = {
+        "default": {"BACKEND": "patrimoine.storage.SupabasePublicS3Storage"},
+        "staticfiles": {"BACKEND": _staticfiles_backend},
+    }
+else:
+    STATICFILES_STORAGE = _staticfiles_backend
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"

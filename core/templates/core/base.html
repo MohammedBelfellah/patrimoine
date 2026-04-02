@@ -261,6 +261,13 @@
             <div class="collapse navbar-collapse" id="mainNav">
                 <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
                     <li class="nav-item"><a class="nav-link" href="{% url 'public-map' %}">Carte publique</a></li>
+                    {% if FEEDBACK_FORM_URL %}
+                    <li class="nav-item">
+                        <a class="btn btn-sm btn-copper px-3" href="{{ FEEDBACK_FORM_URL }}" target="_blank" rel="noopener noreferrer" title="Ouvre le formulaire Google (avis et suggestions)">
+                            <i class="bi bi-chat-heart-fill" aria-hidden="true"></i> Votre avis
+                        </a>
+                    </li>
+                    {% endif %}
                     {% if user.is_authenticated %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a></li>
                     <li class="nav-item"><a class="btn btn-sm btn-copper" href="{% url 'logout' %}">Logout</a></li>

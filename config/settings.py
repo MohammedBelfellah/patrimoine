@@ -38,6 +38,17 @@ if railway_public_domain:
 # Keep the list stable and avoid duplicates when both env vars include the same domain.
 CSRF_TRUSTED_ORIGINS = sorted(set(CSRF_TRUSTED_ORIGINS))
 
+# Public feedback (Google Form). Override with env; set to false/0/off to hide the navbar button.
+_feedback_raw = os.getenv(
+    "FEEDBACK_FORM_URL",
+    "https://forms.gle/LqXUASKzBPhthe2w6",
+).strip()
+FEEDBACK_FORM_URL = (
+    ""
+    if _feedback_raw.lower() in ("0", "false", "off", "disable", "none")
+    else _feedback_raw
+)
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -72,10 +83,12 @@ TEMPLATES = [
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
+                "django.template.context_processors.debug",
                 "django.template.context_processors.request",
                 "django.template.context_processors.media",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "core.context_processors.feedback_form",
             ],
         },
     },

@@ -32,7 +32,15 @@ Copy-Item .env.example .env
 docker compose up --build
 ```
 
-Services:
+Le service `web` attend que PostGIS soit prêt (healthcheck), puis applique les migrations et, si la table legacy `utilisateur` existe encore, le script `fix_user_fkeys.sql` (passage des FK vers `auth_user`).
+
+**Base distante uniquement** (variable `DATABASE_URL` remplie, sans conteneur Postgres local) :
+
+```bash
+docker compose up --build --no-deps web
+```
+
+Services (stack complet local) :
 
 - Django: http://localhost:8000
 - Healthcheck: http://localhost:8000/health/
@@ -91,3 +99,9 @@ docker compose up --build
 ```
 
 `-v` supprime le volume Postgres, donc toutes les données de dev.
+
+## Déploiement avec Supabase (DB) + Railway (Web)
+
+Pour connecter l'app à une base Supabase et déployer le web sur Railway, suivre:
+
+- `DEPLOY_SUPABASE_RAILWAY.md`

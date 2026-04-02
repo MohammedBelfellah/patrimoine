@@ -15,6 +15,7 @@ RUN apt-get update \
     libgdal-dev \
     libgeos-dev \
     netcat-openbsd \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /app/requirements.txt

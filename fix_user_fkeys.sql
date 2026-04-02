@@ -49,6 +49,51 @@ ALTER TABLE audit_log
   ADD CONSTRAINT audit_log_actor_id_fkey 
   FOREIGN KEY (actor_id) REFERENCES auth_user(id) ON DELETE RESTRICT;
 
+-- Re-create summary view after dropping legacy utilisateur dependency
+CREATE OR REPLACE VIEW v_patrimoine_summary AS
+SELECT p.id_patrimoine,
+  p.nom_fr,
+  p.nom_ar,
+  p.type_patrimoine,
+  p.statut,
+  r.nom_region,
+  pr.nom_province,
+  pr.type_province,
+  c.nom_commune,
+  c.type_commune,
+  COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.username) AS created_by_name,
+  COUNT(DISTINCT i.id_inspection) AS nb_inspections,
+  COUNT(DISTINCT iv.id_intervention) AS nb_interventions,
+  (
+    SELECT COUNT(DISTINCT d2.id_document)
+    FROM document d2
+      LEFT JOIN inspection i2 ON i2.id_inspection = d2.id_inspection
+      LEFT JOIN intervention iv2 ON iv2.id_intervention = d2.id_intervention
+    WHERE d2.id_patrimoine = p.id_patrimoine
+      OR i2.id_patrimoine = p.id_patrimoine
+      OR iv2.id_patrimoine = p.id_patrimoine
+  ) AS nb_documents,
+  p.created_at,
+  p.updated_at
+FROM patrimoine p
+  JOIN commune c ON c.id_commune = p.id_commune
+  JOIN province pr ON pr.id_province = c.id_province
+  JOIN region r ON r.id_region = pr.id_region
+  JOIN auth_user u ON u.id = p.created_by
+  LEFT JOIN inspection i ON i.id_patrimoine = p.id_patrimoine
+  LEFT JOIN intervention iv ON iv.id_patrimoine = p.id_patrimoine
+GROUP BY p.id_patrimoine,
+  r.nom_region,
+  pr.nom_province,
+  pr.type_province,
+  c.nom_commune,
+  c.type_commune,
+  u.first_name,
+  u.last_name,
+  u.username;
+
+COMMENT ON VIEW v_patrimoine_summary IS 'Vue synthétique par patrimoine avec compteurs et hiérarchie géographique complète';
+
 COMMIT;
 
 -- Summary

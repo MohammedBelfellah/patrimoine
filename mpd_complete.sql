@@ -322,7 +322,7 @@ SELECT p.id_patrimoine,
     pr.type_province,
     c.nom_commune,
     c.type_commune,
-    u.nom_complet AS created_by_name,
+    COALESCE(NULLIF(TRIM(u.nom_complet), ''), u.email) AS created_by_name,
     COUNT(DISTINCT i.id_inspection) AS nb_inspections,
     COUNT(DISTINCT iv.id_intervention) AS nb_interventions,
     (
@@ -349,7 +349,8 @@ GROUP BY p.id_patrimoine,
     pr.type_province,
     c.nom_commune,
     c.type_commune,
-    u.nom_complet;
+    u.nom_complet,
+    u.email;
 COMMENT ON VIEW v_patrimoine_summary IS 'Vue synthétique par patrimoine avec compteurs et hiérarchie géographique complète';
 -- ============================================================
 -- VIEW: v_commune_full_path

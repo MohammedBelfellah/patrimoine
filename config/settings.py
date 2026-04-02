@@ -1,23 +1,37 @@
 from pathlib import Path
+import importlib.util
 import os
+from urllib.parse import parse_qsl, unquote, urlparse
+import warnings
 from dotenv import load_dotenv
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
+WHITENOISE_AVAILABLE = importlib.util.find_spec("whitenoise") is not None
+if not WHITENOISE_AVAILABLE:
+    WHITENOISE_AVAILABLE = False
+    warnings.warn(
+        "WhiteNoise is not installed. Static files compression and manifest storage are disabled.",
+        RuntimeWarning,
+    )
+
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-change-me")
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
 
 allowed_hosts_raw = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_raw.split(",") if host.strip()]
+railway_public_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+# Railway sets RAILWAY_PUBLIC_DOMAIN; avoid 400 DisallowedHost if env list omits it.
+if railway_public_domain and railway_public_domain not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(railway_public_domain)
 
 csrf_trusted_origins_raw = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "")
 CSRF_TRUSTED_ORIGINS = [
     origin.strip() for origin in csrf_trusted_origins_raw.split(",") if origin.strip()
 ]
 
-railway_public_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
 if railway_public_domain:
     CSRF_TRUSTED_ORIGINS.append(f"https://{railway_public_domain}")
 
@@ -38,7 +52,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -46,6 +59,9 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+if WHITENOISE_AVAILABLE:
+    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
 
 ROOT_URLCONF = "config.urls"
 
@@ -67,19 +83,47 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": os.getenv("POSTGRES_DB", "patrimoine"),
-        "USER": os.getenv("POSTGRES_USER", "patrimoine"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "patrimoine"),
-        "HOST": os.getenv("POSTGRES_HOST", "db"),
-        "PORT": os.getenv("POSTGRES_PORT", "5432"),
-        "OPTIONS": {
-            "sslmode": os.getenv("POSTGRES_SSLMODE", "prefer"),
-        },
+database_url = os.getenv("DATABASE_URL", "").strip()
+if database_url:
+    parsed_db_url = urlparse(database_url)
+    db_options = dict(parse_qsl(parsed_db_url.query))
+    if "sslmode" not in db_options:
+        db_options["sslmode"] = os.getenv("POSTGRES_SSLMODE", "require")
+
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.contrib.gis.db.backends.postgis",
+            "NAME": parsed_db_url.path.lstrip("/")
+            or os.getenv("POSTGRES_DB", "patrimoine"),
+            "USER": (
+                unquote(parsed_db_url.username)
+                if parsed_db_url.username
+                else os.getenv("POSTGRES_USER", "patrimoine")
+            ),
+            "PASSWORD": (
+                unquote(parsed_db_url.password)
+                if parsed_db_url.password
+                else os.getenv("POSTGRES_PASSWORD", "patrimoine")
+            ),
+            "HOST": parsed_db_url.hostname or os.getenv("POSTGRES_HOST", "db"),
+            "PORT": str(parsed_db_url.port or os.getenv("POSTGRES_PORT", "5432")),
+            "OPTIONS": db_options,
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.contrib.gis.db.backends.postgis",
+            "NAME": os.getenv("POSTGRES_DB", "patrimoine"),
+            "USER": os.getenv("POSTGRES_USER", "patrimoine"),
+            "PASSWORD": os.getenv("POSTGRES_PASSWORD", "patrimoine"),
+            "HOST": os.getenv("POSTGRES_HOST", "db"),
+            "PORT": os.getenv("POSTGRES_PORT", "5432"),
+            "OPTIONS": {
+                "sslmode": os.getenv("POSTGRES_SSLMODE", "prefer"),
+            },
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -103,7 +147,10 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+if WHITENOISE_AVAILABLE:
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+else:
+    STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 
 # Media files (uploads)
 MEDIA_URL = "/media/"

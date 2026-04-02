@@ -111,15 +111,26 @@ def _normalize_audit_data(data):
 
 
 def _log_audit(actor, action, entity_type, entity_id, old_data=None, new_data=None):
-    AuditLog.objects.create(
-        actor=actor,
-        action=action,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        old_data=_normalize_audit_data(old_data),
-        new_data=_normalize_audit_data(new_data),
-        created_at=timezone.now(),
-    )
+    try:
+        AuditLog.objects.create(
+            actor=actor,
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            old_data=_normalize_audit_data(old_data),
+            new_data=_normalize_audit_data(new_data),
+            created_at=timezone.now(),
+        )
+    except IntegrityError:
+        logger.exception(
+            "Audit log insert failed",
+            extra={
+                "action": action,
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "actor_id": getattr(actor, "id", None),
+            },
+        )
 
 
 def _dashboard_url_for_role(role):
@@ -1708,8 +1719,8 @@ def user_management(request):
             elif role == "INSPECTEUR":
                 new_user.groups.add(Group.objects.get(name="INSPECTEUR"))
 
-            # Audit log for user creation
-            AuditLog.objects.create(
+            # Audit log for user creation (non-blocking)
+            _log_audit(
                 actor=request.user,
                 action="CREATE",
                 entity_type="USER",
@@ -1720,7 +1731,6 @@ def user_management(request):
                     "email": email,
                     "role": role,
                 },
-                created_at=timezone.now(),
             )
             try:
                 _send_welcome_user_email(request, new_user, password, role)
@@ -1915,8 +1925,8 @@ def delete_user(request, user_id):
         return redirect("user-management")
 
     username = user.username
-    # Audit log for user deletion
-    AuditLog.objects.create(
+    # Audit log for user deletion (non-blocking)
+    _log_audit(
         actor=request.user,
         action="DELETE",
         entity_type="USER",
@@ -1927,7 +1937,6 @@ def delete_user(request, user_id):
             "groups": list(user.groups.values_list("name", flat=True)),
         },
         new_data=None,
-        created_at=timezone.now(),
     )
     try:
         user.delete()

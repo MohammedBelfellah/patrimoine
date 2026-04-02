@@ -22,3 +22,5 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY . /app
+# .dockerignore omits staticfiles/ and media/ — create dirs so WhiteNoise and uploads have a real path
+RUN mkdir -p /app/staticfiles /app/media

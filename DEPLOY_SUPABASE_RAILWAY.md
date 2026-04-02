@@ -84,9 +84,13 @@ Deploy steps:
 3. Add the environment variables listed above.
 4. Trigger deploy.
 
-## 4.1) Persistent media files (important)
+## 4.1) Static logo + uploaded images (`/static/` and `/media/`)
 
-Railway container filesystem is ephemeral. If users upload files and you keep local MEDIA_ROOT only, files can be lost on restart/redeploy.
+In production, **WhiteNoise** serves collected static files (e.g. the navbar logo under `/static/...`). **`/media/`** is served by Django from `MEDIA_ROOT` so patrimoine images and PDFs resolve after deploy (this was previously 404 when `DEBUG=0` because only dev URLs mounted `/media/`).
+
+## 4.2) Persistent media files (important)
+
+Railway container filesystem is ephemeral. If users upload files and you keep local `MEDIA_ROOT` only, files can be **lost on restart/redeploy** even though URLs work.
 
 Use one of these options before production:
 1. Store uploads in Supabase Storage (recommended if you already use Supabase).

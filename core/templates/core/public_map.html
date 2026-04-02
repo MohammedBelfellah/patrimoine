@@ -277,9 +277,11 @@
 <script src="https://unpkg.com/leaflet-image/leaflet-image.js"></script>
 <script>
   const map = L.map('map', { zoomControl: true }).setView([31.7917, -7.0926], 6);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors'
+  /* CARTO basemaps (OSM data) — avoid tile.openstreetmap.org 403s in production (OSM tile policy / Referer). */
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+    maxZoom: 20,
+    subdomains: 'abcd',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
   }).addTo(map);
   L.control.scale({ imperial: false }).addTo(map);
 

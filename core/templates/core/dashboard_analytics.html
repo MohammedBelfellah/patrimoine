@@ -137,9 +137,10 @@
   makeBarChart('chartIntervention', interventionStatus.map(x => x.statut), interventionStatus.map(x => x.total));
 
   const map = L.map('miniMap').setView([31.7917, -7.0926], 6);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors'
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+    maxZoom: 20,
+    subdomains: 'abcd',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
   }).addTo(map);
 
   const typeColor = { MONDIAL: '#f97316', NATUREL: '#10b981', HISTORIQUE: '#3b82f6', AUTRE: '#64748b' };

@@ -2,149 +2,203 @@
 {% block title %}Inspecteur{% endblock %}
 {% block head_extra %}
 <style>
+    .dashboard-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .dashboard-head h2 {
+        margin: 0 0 6px;
+        color: #1f2937;
+    }
+
+    .quick-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 12px;
+        margin: 18px 0;
+    }
+
+    .quick-action {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 54px;
+        padding: 14px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 700;
+        border: 1px solid rgba(22, 66, 60, 0.18);
+        background: #fff;
+        color: #16423c;
+    }
+
+    .quick-action:hover {
+        background: #eef7f4;
+        color: #0f302b;
+    }
+
+    .quick-action.primary {
+        background: #16423c;
+        color: #fff;
+    }
+
+    .quick-action.primary:hover {
+        background: #0f302b;
+        color: #fff;
+    }
+
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-        margin: 20px 0;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+        margin: 18px 0;
     }
 
     .stat-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 20px;
-        border-radius: 12px;
-        text-align: center;
-    }
-
-    .stat-card.blue {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    }
-
-    .stat-card.green {
-        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        background: #fff;
+        border: 1px solid rgba(148, 163, 184, .35);
+        border-radius: 8px;
+        padding: 16px;
     }
 
     .stat-number {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin: 10px 0;
+        font-size: 2rem;
+        font-weight: 800;
+        color: #16423c;
+        margin: 4px 0;
     }
 
     .stat-label {
-        font-size: 0.9rem;
-        opacity: 0.95;
+        color: #64748b;
+        font-size: .92rem;
     }
 
     .section-title {
         color: #1f2937;
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         font-weight: 700;
-        margin: 30px 0 15px;
+        margin: 24px 0 12px;
         padding-bottom: 8px;
-        border-bottom: 2px solid #e5e7eb;
+        border-bottom: 1px solid #e5e7eb;
     }
 
-    .patrimoine-item {
+    .list-item {
         padding: 12px;
-        background: #f9fafb;
-        border-left: 3px solid #4facfe;
+        background: #fff;
+        border: 1px solid rgba(148, 163, 184, .32);
+        border-left: 4px solid #16423c;
         margin-bottom: 10px;
-        border-radius: 6px;
+        border-radius: 8px;
     }
 
-    .patrimoine-item:hover {
-        background: #f3f4f6;
+    .list-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
     }
 
-    .inspection-item {
-        padding: 12px;
-        background: #f0fdf4;
-        border-left: 3px solid #43e97b;
-        margin-bottom: 10px;
-        border-radius: 6px;
-    }
-
-    .inspection-item:hover {
-        background: #dcfce7;
+    @media (max-width: 700px) {
+        .dashboard-head,
+        .list-row {
+            display: grid;
+        }
     }
 </style>
 {% endblock %}
+
 {% block content %}
 <div class="card">
-    <h2><i class="bi bi-search"></i> Inspecteur - Suivi Terrain</h2>
-    <p class="muted">Bienvenue {{ user.get_full_name|default:user.username }}. Voici un aperçu de votre activité
-        d'inspection.</p>
+    <div class="dashboard-head">
+        <div>
+            <h2><i class="bi bi-search"></i> Inspecteur - Suivi terrain</h2>
+            <p class="muted">Bienvenue {{ user.get_full_name|default:user.username }}. Choisissez une action pour commencer.</p>
+        </div>
+        <a class="btn btn-success" href="{% url 'inspection-create' %}">
+            <i class="bi bi-plus-circle"></i> Nouvelle inspection
+        </a>
+    </div>
+
+    <div class="quick-actions-grid">
+        <a class="quick-action primary" href="{% url 'inspection-create' %}">
+            <i class="bi bi-plus-circle"></i> Ajouter une inspection
+        </a>
+        <a class="quick-action" href="{% url 'inspection-list' %}">
+            <i class="bi bi-clipboard-check"></i> Mes inspections
+        </a>
+        <a class="quick-action" href="{% url 'patrimoine-list' %}">
+            <i class="bi bi-buildings"></i> Patrimoines
+        </a>
+        <a class="quick-action" href="{% url 'patrimoine-map' %}">
+            <i class="bi bi-map"></i> Carte
+        </a>
+    </div>
 
     <div class="stats-grid">
-        <div class="stat-card blue">
-            <div class="stat-label">Mes Inspections</div>
+        <div class="stat-card">
+            <div class="stat-label">Mes inspections</div>
             <div class="stat-number">{{ my_inspections_count }}</div>
-            <div class="stat-label">Total effectuées</div>
-        </div>
-        <div class="stat-card green">
-            <div class="stat-label">Patrimoines Inspectés</div>
-            <div class="stat-number">{{ inspected_patrimoines|length }}</div>
-            <div class="stat-label">Sites différents</div>
+            <div class="stat-label">Total effectuees</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Base de Données</div>
+            <div class="stat-label">Patrimoines inspectes</div>
+            <div class="stat-number">{{ inspected_patrimoines_count }}</div>
+            <div class="stat-label">Sites differents</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Base de donnees</div>
             <div class="stat-number">{{ total_patrimoines }}</div>
-            <div class="stat-label">Patrimoines enregistrés</div>
+            <div class="stat-label">Patrimoines enregistres</div>
         </div>
     </div>
 
+    <h3 class="section-title"><i class="bi bi-clipboard-check"></i> Mes inspections recentes</h3>
     {% if recent_inspections %}
-    <h3 class="section-title"><i class="bi bi-clipboard-check"></i> Mes Inspections Récentes</h3>
-    {% for inspection in recent_inspections %}
-    <div class="inspection-item">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <strong style="color: #1f2937;">{{ inspection.id_patrimoine.nom_fr }}</strong>
-                <div style="color: #6b7280; font-size: 0.9rem; margin-top: 4px;">
-                    État: <strong>{{ inspection.get_etat_display }}</strong> ·
-                    {{ inspection.date_inspection|date:"d/m/Y" }}
+        {% for inspection in recent_inspections %}
+        <div class="list-item">
+            <div class="list-row">
+                <div>
+                    <strong style="color:#1f2937;">{{ inspection.id_patrimoine.nom_fr }}</strong>
+                    <div class="muted" style="font-size:.92rem;margin-top:4px;">
+                        Etat: <strong>{{ inspection.get_etat_display }}</strong> · {{ inspection.date_inspection|date:"d/m/Y" }}
+                    </div>
                 </div>
+                <a href="{% url 'inspection-detail' inspection.id_inspection %}" class="btn btn-sm btn-outline-primary">Voir</a>
             </div>
-            <a href="{% url 'inspection-detail' inspection.id_inspection %}"
-                class="btn btn-sm btn-outline-primary">Voir</a>
         </div>
-    </div>
-    {% endfor %}
-    {% endif %}
-
-    {% if inspected_patrimoines %}
-    <h3 class="section-title"><i class="bi bi-building"></i> Patrimoines que j'ai Inspectés</h3>
-    {% for patrimoine in inspected_patrimoines %}
-    <div class="patrimoine-item">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <strong style="color: #1f2937;">{{ patrimoine.nom_fr }}</strong>
-                <div style="color: #6b7280; font-size: 0.9rem; margin-top: 4px;">
-                    {{ patrimoine.get_type_patrimoine_display }} · {{ patrimoine.full_location }}
-                </div>
-            </div>
-            <a href="{% url 'patrimoine-detail' patrimoine.id_patrimoine %}"
-                class="btn btn-sm btn-outline-primary">Détails</a>
-        </div>
-    </div>
-    {% endfor %}
+        {% endfor %}
     {% else %}
-    <div
-        style="margin-top: 30px; padding: 20px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
-        <p style="margin: 0; color: #92400e;">Vous n'avez pas encore effectué d'inspections. Commencez par consulter la
-            liste des patrimoines et créez votre première inspection.</p>
-    </div>
+        <div class="list-item">
+            <div class="list-row">
+                <div>Aucune inspection pour le moment.</div>
+                <a class="btn btn-sm btn-success" href="{% url 'inspection-create' %}">Creer la premiere</a>
+            </div>
+        </div>
     {% endif %}
 
-    <div
-        style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-radius: 12px; border-left: 4px solid #667eea;">
-        <h3 style="margin-top: 0; color: #1f2937;"><i class="bi bi-clipboard-check"></i> Actions Rapides</h3>
-        <ul style="line-height: 1.8; color: #4b5563;">
-            <li><strong>Patrimoines</strong> : Consultez la liste complète des patrimoines culturels</li>
-            <li><strong>Inspections</strong> : Créez et gérez vos rapports d'inspection terrain</li>
-            <li><strong>Carte</strong> : Visualisez la répartition géographique des sites</li>
-        </ul>
-    </div>
+    <h3 class="section-title"><i class="bi bi-building"></i> Patrimoines que j'ai inspectes</h3>
+    {% if inspected_patrimoines %}
+        {% for patrimoine in inspected_patrimoines %}
+        <div class="list-item">
+            <div class="list-row">
+                <div>
+                    <strong style="color:#1f2937;">{{ patrimoine.nom_fr }}</strong>
+                    <div class="muted" style="font-size:.92rem;margin-top:4px;">
+                        {{ patrimoine.get_type_patrimoine_display }} · {{ patrimoine.full_location }}
+                    </div>
+                </div>
+                <a href="{% url 'patrimoine-detail' patrimoine.id_patrimoine %}" class="btn btn-sm btn-outline-primary">Details</a>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="list-item">
+            Consultez les patrimoines puis ajoutez votre premiere inspection terrain.
+        </div>
+    {% endif %}
 </div>
 {% endblock %}

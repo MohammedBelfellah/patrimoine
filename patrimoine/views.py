@@ -4,6 +4,7 @@ import os
 import secrets
 import string
 import tempfile
+import threading
 from datetime import date, datetime
 from decimal import Decimal
 import logging
@@ -17,7 +18,7 @@ from django.contrib.gis.gdal import DataSource
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.core.files.storage import default_storage
 from django.conf import settings
-from django.db import IntegrityError, connection
+from django.db import IntegrityError, close_old_connections, connection
 from django.db.models.deletion import ProtectedError
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
@@ -155,6 +156,35 @@ def _absolute_app_url(request, path):
     return request.build_absolute_uri(path)
 
 
+def _send_email_message(message, log_label, user=None):
+    def deliver():
+        close_old_connections()
+        try:
+            message.send(fail_silently=False)
+            logger.info(
+                "%s email sent for user_id=%s email=%s",
+                log_label,
+                getattr(user, "id", None),
+                getattr(user, "email", None),
+            )
+        except Exception as exc:
+            logger.exception(
+                "%s email failed for user_id=%s email=%s error=%s",
+                log_label,
+                getattr(user, "id", None),
+                getattr(user, "email", None),
+                exc,
+            )
+        finally:
+            close_old_connections()
+
+    if getattr(settings, "EMAIL_SEND_ASYNC", True):
+        threading.Thread(target=deliver, daemon=True).start()
+        return
+
+    message.send(fail_silently=False)
+
+
 def _send_welcome_user_email(request, user, raw_password, role):
     login_url = _absolute_app_url(request, reverse("login"))
     dashboard_url = _absolute_app_url(request, _dashboard_url_for_role(role))
@@ -200,7 +230,7 @@ L’équipe Geo Patrimoine Hub
         to=[user.email],
     )
     msg.attach_alternative(html_message, "text/html")
-    msg.send(fail_silently=False)
+    _send_email_message(msg, "Welcome", user)
 
 
 def _send_role_changed_email(request, user, role, added, raw_password=None):
@@ -278,7 +308,7 @@ L’équipe Geo Patrimoine Hub
         to=[user.email],
     )
     msg.attach_alternative(html_message, "text/html")
-    msg.send(fail_silently=False)
+    _send_email_message(msg, "Role change", user)
 
 
 def _send_user_updated_email(
@@ -331,7 +361,7 @@ Nom d'utilisateur : {user.username}
         to=recipients,
     )
     msg.attach_alternative(html_message, "text/html")
-    msg.send(fail_silently=False)
+    _send_email_message(msg, "Update notification", user)
 
 
 @login_required
@@ -1828,7 +1858,7 @@ def user_management(request):
             try:
                 _send_welcome_user_email(request, new_user, password, role)
                 logger.info(
-                    "Welcome email accepted by SMTP for user_id=%s email=%s",
+                    "Welcome email queued for user_id=%s email=%s",
                     new_user.id,
                     new_user.email,
                 )
@@ -1917,7 +1947,7 @@ def edit_user(request, user_id):
                 raw_password=new_password or None,
             )
             logger.info(
-                "Update notification email accepted by SMTP for user_id=%s email=%s",
+                    "Update notification email queued for user_id=%s email=%s",
                 target_user.id,
                 target_user.email,
             )

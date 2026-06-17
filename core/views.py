@@ -91,12 +91,16 @@ def inspecteur_view(request):
     my_inspections = Inspection.objects.filter(id_inspecteur=request.user)
     my_inspections_count = my_inspections.count()
     total_patrimoines = Patrimoine.objects.count()
+    inspected_patrimoines_count = (
+        my_inspections.values("id_patrimoine").distinct().count()
+    )
 
     # Patrimoines inspected by this inspecteur
     inspected_patrimoines = (
-        Patrimoine.objects.filter(inspection__id_inspecteur=request.user)
+        Patrimoine.objects.select_related("id_commune__id_province__id_region")
+        .filter(inspection__id_inspecteur=request.user)
         .distinct()
-        .order_by("-inspection__date_inspection")[:10]
+        .order_by("nom_fr")[:10]
     )
 
     # Recent inspections
@@ -107,6 +111,7 @@ def inspecteur_view(request):
     context = {
         "my_inspections_count": my_inspections_count,
         "total_patrimoines": total_patrimoines,
+        "inspected_patrimoines_count": inspected_patrimoines_count,
         "inspected_patrimoines": inspected_patrimoines,
         "recent_inspections": recent_inspections,
     }

@@ -281,7 +281,7 @@
     </nav>
     <main class="container-fluid app-shell px-3 px-lg-4 py-4">
         {% url 'public-map' as public_map_url %}
-        {% if user.is_authenticated and user.is_staff and request.path != public_map_url %}
+        {% if user.is_authenticated and request.path != public_map_url %}
         <div class="layout">
             {% url 'patrimoine-list' as patrimoine_list_url %}
             {% url 'inspection-list' as inspection_list_url %}

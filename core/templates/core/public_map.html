@@ -150,6 +150,24 @@
     border: 1px solid rgba(148, 163, 184, 0.25);
   }
 
+  .map-label {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(22, 66, 60, 0.25);
+    border-radius: 6px;
+    color: #16423c;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 6px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+    white-space: nowrap;
+  }
+
+  .detail-description {
+    color: #334155;
+    line-height: 1.45;
+    margin-top: 10px;
+  }
+
   .gis-status {
     margin-top: 8px;
     font-size: .8rem;
@@ -294,6 +312,7 @@
   const sidebarModules = document.querySelectorAll('.sidebar-module');
   const layerGroup = L.geoJSON(null, { style: featureStyle }).addTo(map);
   const layerIndex = new Map();
+  const labelLayer = L.layerGroup().addTo(map);
   const drawnItems = new L.FeatureGroup().addTo(map);
   let selectedId = null;
   let lastCoords = null;
@@ -342,8 +361,30 @@
     return { color: '#c2410c', weight: 3, fillOpacity: 0.35 };
   }
 
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[char]));
+  }
+
+  function shortText(value, maxLength = 120) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    return text.length > maxLength ? `${text.slice(0, maxLength - 1)}...` : text;
+  }
+
+  function layerCenter(layer) {
+    const bounds = layer.getBounds();
+    return bounds.isValid() ? bounds.getCenter() : null;
+  }
+
   function buildFeatures(data) {
     layerGroup.clearLayers();
+    labelLayer.clearLayers();
     layerIndex.clear();
     data.forEach((p) => {
       if (!p.geom) { return; }
@@ -366,6 +407,17 @@
       });
       layerGroup.addLayer(layer);
       layerIndex.set(p.id, layer);
+      const center = layerCenter(layer);
+      if (center) {
+        labelLayer.addLayer(L.marker(center, {
+          interactive: false,
+          icon: L.divIcon({
+            className: '',
+            html: `<div class="map-label">${escapeHtml(shortText(p.nom, 34))}</div>`,
+            iconSize: null,
+          }),
+        }));
+      }
     });
 
     if (data.length) {
@@ -381,12 +433,16 @@
     data.forEach((p) => {
       const item = document.createElement('div');
       item.className = 'list-item' + (p.id === selectedId ? ' active' : '');
-      item.innerHTML = `<strong>${p.nom}</strong><div class="small muted">${p.region_name} · ${p.type}</div>`;
+      const description = shortText(p.description, 90);
+      item.innerHTML = `
+        <strong>${escapeHtml(p.nom)}</strong>
+        <div class="small muted">${escapeHtml(p.region_name)} - ${escapeHtml(p.type_label || p.type)}</div>
+        ${description ? `<div class="small mt-1">${escapeHtml(description)}</div>` : ''}
+      `;
       item.addEventListener('click', () => selectPatrimoine(p.id));
       listEl.appendChild(item);
     });
   }
-
   function selectPatrimoine(id) {
     selectedId = id;
     layerIndex.forEach((layer, key) => {
@@ -407,10 +463,12 @@
       detailModule.open = true;
     }
     detailCard.innerHTML = `
-      <div class="fw-semibold mb-1">${p.nom}</div>
-      <div class="small muted">${p.full_location}</div>
-      <div class="mt-2"><span class="badge text-bg-light">${p.type_label}</span> <span class="badge text-bg-light">${p.statut_label}</span></div>
-      <div class="mt-2 small">Region: ${p.region_name || '-'}<br>Province: ${p.province_name || '-'}<br>Commune: ${p.commune_name || '-'}</div>
+      <div class="fw-semibold mb-1">${escapeHtml(p.nom)}</div>
+      ${p.nom_ar ? `<div class="small muted mb-1">${escapeHtml(p.nom_ar)}</div>` : ''}
+      <div class="small muted">${escapeHtml(p.full_location)}</div>
+      <div class="mt-2"><span class="badge text-bg-light">${escapeHtml(p.type_label)}</span> <span class="badge text-bg-light">${escapeHtml(p.statut_label)}</span></div>
+      ${p.description ? `<div class="detail-description">${escapeHtml(p.description)}</div>` : '<div class="detail-description muted">Aucune description disponible.</div>'}
+      <div class="mt-2 small">Region: ${escapeHtml(p.region_name || '-')}<br>Province: ${escapeHtml(p.province_name || '-')}<br>Commune: ${escapeHtml(p.commune_name || '-')}</div>
     `;
     renderList(drawFiltered || currentFiltered);
   }
@@ -427,7 +485,16 @@
   function applyFilters() {
     const { search, type, status, region } = getFilters();
     currentFiltered = patrimoines.filter((p) => {
-      const matchesSearch = !search || p.nom.toLowerCase().includes(search);
+      const searchable = [
+        p.nom,
+        p.nom_ar,
+        p.description,
+        p.region_name,
+        p.province_name,
+        p.commune_name,
+        p.full_location,
+      ].join(' ').toLowerCase();
+      const matchesSearch = !search || searchable.includes(search);
       const matchesType = !type || p.type === type;
       const matchesStatus = !status || p.statut === status;
       const matchesRegion = !region || String(p.region_id) === String(region);

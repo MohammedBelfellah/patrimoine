@@ -162,6 +162,8 @@ def public_map_view(request):
                 {
                     "id": p.id_patrimoine,
                     "nom": p.nom_fr,
+                    "nom_ar": p.nom_ar or "",
+                    "description": p.description or "",
                     "type": p.type_patrimoine,
                     "statut": p.statut,
                     "type_label": p.get_type_patrimoine_display(),

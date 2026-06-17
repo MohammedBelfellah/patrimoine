@@ -1,6 +1,8 @@
 import csv
 import json
 import os
+import secrets
+import string
 import tempfile
 from datetime import date, datetime
 from decimal import Decimal
@@ -141,6 +143,11 @@ def _dashboard_url_for_role(role):
     return reverse("dashboard-public")
 
 
+def _generate_temporary_password(length=14):
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
 def _absolute_app_url(request, path):
     base_url = getattr(settings, "APP_BASE_URL", "").strip().rstrip("/")
     if base_url:
@@ -186,6 +193,84 @@ L’équipe Geo Patrimoine Hub
   <p style='margin-top:18px;font-size:13px;color:#64748b;'>Merci,<br>L’équipe Geo Patrimoine Hub</p>
 </div>
 """
+    msg = EmailMultiAlternatives(
+        subject=subject,
+        body=text_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[user.email],
+    )
+    msg.attach_alternative(html_message, "text/html")
+    msg.send(fail_silently=False)
+
+
+def _send_role_changed_email(request, user, role, added, raw_password=None):
+    login_url = _absolute_app_url(request, reverse("login"))
+    dashboard_url = _absolute_app_url(request, _dashboard_url_for_role(role))
+    role_label = role.capitalize()
+
+    if added:
+        subject = f"Votre accès {role_label} sur Geo Patrimoine Hub"
+        text_message = f"""
+Bonjour {user.username},
+
+Votre rôle a été mis à jour sur Geo Patrimoine Hub.
+
+Nouveau rôle : {role_label}
+Email : {user.email}
+Nom d'utilisateur : {user.username}
+"""
+        if raw_password:
+            text_message += f"Mot de passe provisoire : {raw_password}\n"
+        text_message += f"""
+Accédez à votre espace : {dashboard_url}
+Connexion : {login_url}
+
+Merci,
+L’équipe Geo Patrimoine Hub
+"""
+        password_html = (
+            f"<li><b>Mot de passe provisoire :</b> <span style='color:#dc2626;'>{raw_password}</span></li>"
+            if raw_password
+            else ""
+        )
+        html_message = f"""
+<div style='font-family:Arial,sans-serif;max-width:520px;margin:0 auto;'>
+  <h2 style='color:#2563eb;'>Votre accès Geo Patrimoine Hub</h2>
+  <p>Bonjour <b>{user.username}</b>,</p>
+  <p>Votre rôle a été mis à jour.</p>
+  <ul style='background:#f1f5f9;padding:14px 18px;border-radius:8px;'>
+    <li><b>Nouveau rôle :</b> {role_label}</li>
+    <li><b>Email :</b> {user.email}</li>
+    <li><b>Nom d'utilisateur :</b> {user.username}</li>
+    {password_html}
+  </ul>
+  <p>Accédez à votre espace : <a href='{dashboard_url}' style='color:#2563eb;'>Tableau de bord</a></p>
+  <p>Connexion : <a href='{login_url}' style='color:#2563eb;'>{login_url}</a></p>
+  <p style='margin-top:18px;font-size:13px;color:#64748b;'>Merci,<br>L’équipe Geo Patrimoine Hub</p>
+</div>
+"""
+    else:
+        subject = "Mise à jour de votre accès Geo Patrimoine Hub"
+        text_message = f"""
+Bonjour {user.username},
+
+Votre rôle {role_label} a été retiré sur Geo Patrimoine Hub.
+
+Connexion : {login_url}
+
+Merci,
+L’équipe Geo Patrimoine Hub
+"""
+        html_message = f"""
+<div style='font-family:Arial,sans-serif;max-width:520px;margin:0 auto;'>
+  <h2 style='color:#2563eb;'>Mise à jour de votre accès Geo Patrimoine Hub</h2>
+  <p>Bonjour <b>{user.username}</b>,</p>
+  <p>Votre rôle <b>{role_label}</b> a été retiré.</p>
+  <p>Connexion : <a href='{login_url}' style='color:#2563eb;'>{login_url}</a></p>
+  <p style='margin-top:18px;font-size:13px;color:#64748b;'>Merci,<br>L’équipe Geo Patrimoine Hub</p>
+</div>
+"""
+
     msg = EmailMultiAlternatives(
         subject=subject,
         body=text_message,
@@ -1699,6 +1784,9 @@ def user_management(request):
 
     error = ""
     success = ""
+    groups_by_name = {
+        group.name: group for group in Group.objects.filter(name__in=["ADMIN", "INSPECTEUR"])
+    }
     if request.method == "POST":
         email = request.POST.get("email", "").strip().lower()
         username = request.POST.get("username", "").strip()
@@ -1721,10 +1809,8 @@ def user_management(request):
             new_user.is_staff = role == "ADMIN"
             new_user.save()
 
-            if role == "ADMIN":
-                new_user.groups.add(Group.objects.get(name="ADMIN"))
-            elif role == "INSPECTEUR":
-                new_user.groups.add(Group.objects.get(name="INSPECTEUR"))
+            if role in groups_by_name:
+                new_user.groups.add(groups_by_name[role])
 
             # Audit log for user creation (non-blocking)
             _log_audit(
@@ -1756,18 +1842,16 @@ def user_management(request):
                 )
                 success = "Utilisateur créé avec succès. Email non envoyé (vérifiez la configuration SMTP)."
 
-    users = User.objects.all().prefetch_related("groups")
+    users = User.objects.all().prefetch_related("groups").order_by("id")
     for user in users:
-        group_names = list(user.groups.values_list("name", flat=True))
+        group_names = [group.name for group in user.groups.all()]
         user.group_names = group_names
         user.is_admin = "ADMIN" in group_names
         user.is_inspecteur = "INSPECTEUR" in group_names
-    admin_group = Group.objects.get(name="ADMIN")
-    inspecteur_group = Group.objects.get(name="INSPECTEUR")
     context = {
         "users": users,
-        "admin_group": admin_group,
-        "inspecteur_group": inspecteur_group,
+        "admin_group": groups_by_name.get("ADMIN"),
+        "inspecteur_group": groups_by_name.get("INSPECTEUR"),
         "error": error,
         "success": success,
     }
@@ -1873,13 +1957,101 @@ def toggle_user_group(request, user_id, group_name):
     if not request.user.is_superuser:
         return redirect("dashboard")
 
-    user = get_object_or_404(User, id=user_id)
-    group = get_object_or_404(Group, name=group_name)
+    group_name = group_name.strip().upper()
+    if group_name not in {"ADMIN", "INSPECTEUR"}:
+        messages.error(request, "Rôle invalide.")
+        return redirect("user-management")
 
+    user = get_object_or_404(User, id=user_id)
+    if user.is_superuser:
+        messages.error(request, "Le rôle du superadmin ne peut pas être modifié ici.")
+        return redirect("user-management")
+
+    groups_by_name = {
+        group.name: group for group in Group.objects.filter(name__in=["ADMIN", "INSPECTEUR"])
+    }
+    group = groups_by_name.get(group_name)
+    if not group:
+        messages.error(request, "Groupe introuvable.")
+        return redirect("user-management")
+
+    old_groups = list(user.groups.values_list("name", flat=True))
+    added = False
+    raw_password = None
     if user.groups.filter(name=group_name).exists():
         user.groups.remove(group)
+        if group_name == "ADMIN":
+            user.is_staff = False
+            user.save(update_fields=["is_staff"])
+        action_label = f"Rôle {group_name} retiré"
     else:
+        # Role changes from the icon are exclusive, same as the edit form.
+        other_role = "INSPECTEUR" if group_name == "ADMIN" else "ADMIN"
+        other_group = groups_by_name.get(other_role)
+        if other_group:
+            user.groups.remove(other_group)
+
+        raw_password = _generate_temporary_password()
+        user.set_password(raw_password)
+        user.is_active = True
+        user.is_staff = group_name == "ADMIN"
+        user.save(update_fields=["password", "is_active", "is_staff"])
         user.groups.add(group)
+        added = True
+        action_label = f"Rôle {group_name} ajouté"
+
+    new_groups = list(user.groups.values_list("name", flat=True))
+    _log_audit(
+        actor=request.user,
+        action="UPDATE",
+        entity_type="USER",
+        entity_id=user.id,
+        old_data={"groups": old_groups},
+        new_data={"groups": new_groups, "role_action": action_label},
+    )
+
+    try:
+        _send_role_changed_email(
+            request=request,
+            user=user,
+            role=group_name,
+            added=added,
+            raw_password=raw_password,
+        )
+        if added:
+            messages.success(
+                request,
+                f"{action_label}. Identifiants envoyés par email à {user.email}.",
+            )
+        else:
+            messages.success(
+                request, f"{action_label}. Notification envoyée à {user.email}."
+            )
+        logger.info(
+            "Role change email accepted by SMTP for user_id=%s email=%s role=%s added=%s",
+            user.id,
+            user.email,
+            group_name,
+            added,
+        )
+    except Exception as exc:
+        logger.exception(
+            "Role change email failed for user_id=%s email=%s role=%s added=%s error=%s",
+            user.id,
+            user.email,
+            group_name,
+            added,
+            exc,
+        )
+        if added:
+            messages.warning(
+                request,
+                f"{action_label}, mais l'email avec les identifiants n'a pas été envoyé.",
+            )
+        else:
+            messages.warning(
+                request, f"{action_label}, mais l'email de notification n'a pas été envoyé."
+            )
 
     return redirect("user-management")
 

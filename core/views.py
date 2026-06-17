@@ -1,13 +1,19 @@
 import json
 import logging
+import re
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
 from django.contrib.auth.views import LoginView
+from django.conf import settings
 from django.db import DatabaseError
-from django.db.models import Count
+from django.db.models import Count, Q
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.http import require_POST
 
 from .forms import EmailAuthenticationForm
 from patrimoine.models import Inspection, Intervention, Patrimoine, Region
@@ -118,6 +124,14 @@ def public_dashboard_view(request):
     return render(request, "core/dashboard_public.html")
 
 
+def chatbot_view(request):
+    return render(
+        request,
+        "core/chatbot.html",
+        {"groq_configured": bool(settings.GROQ_API_KEY)},
+    )
+
+
 def public_map_view(request):
     data = []
     regions = Region.objects.none()
@@ -168,6 +182,241 @@ def public_map_view(request):
         "patrimoine_statuts": Patrimoine.PATRIMOINE_STATUTS,
     }
     return render(request, "core/public_map.html", context)
+
+
+PRIVATE_CHATBOT_TERMS = {
+    "password",
+    "mot de passe",
+    "email",
+    "e-mail",
+    "mail",
+    "user",
+    "utilisateur",
+    "admin",
+    "superadmin",
+    "inspecteur",
+    "audit",
+    "log",
+    "file_path",
+    "chemin",
+    "uploaded_by",
+    "created_by",
+    "token",
+    "secret",
+    "smtp",
+    "database_url",
+    "api key",
+    "clé api",
+}
+
+
+CHATBOT_SYSTEM_PROMPT = """
+Tu es l'assistant public de Geo Patrimoine Hub.
+Réponds en français simple, utile et concis.
+Tu peux expliquer les données publiques du patrimoine fournies dans le contexte.
+Tu ne dois jamais inventer des données absentes du contexte.
+Tu ne dois jamais révéler ou deviner des informations privées: comptes utilisateurs,
+emails, mots de passe, inspecteurs, administrateurs, journaux d'audit, chemins de fichiers,
+clés, tokens, configuration serveur, données internes ou informations personnelles.
+Si une demande vise ces informations, refuse brièvement et propose une alternative publique.
+Si la question est générale, aide l'utilisateur, mais précise quand la réponse ne vient pas
+directement de la base de données.
+""".strip()
+
+
+def _chatbot_private_request(message):
+    text = message.lower()
+    return any(term in text for term in PRIVATE_CHATBOT_TERMS)
+
+
+def _chatbot_search_terms(message):
+    return [
+        term
+        for term in re.findall(r"[\wÀ-ÿ'-]{3,}", message.lower())
+        if term
+        not in {
+            "les",
+            "des",
+            "une",
+            "dans",
+            "avec",
+            "pour",
+            "quoi",
+            "quel",
+            "quelle",
+            "combien",
+            "patrimoine",
+            "patrimoines",
+        }
+    ][:8]
+
+
+def _public_patrimoine_context(message):
+    stats = {
+        "total_patrimoines": Patrimoine.objects.count(),
+        "total_regions": Region.objects.count(),
+        "total_inspections": Inspection.objects.count(),
+        "total_interventions": Intervention.objects.count(),
+        "patrimoines_par_type": list(
+            Patrimoine.objects.values("type_patrimoine")
+            .annotate(total=Count("id_patrimoine"))
+            .order_by("type_patrimoine")
+        ),
+        "patrimoines_par_statut": list(
+            Patrimoine.objects.values("statut")
+            .annotate(total=Count("id_patrimoine"))
+            .order_by("statut")
+        ),
+        "patrimoines_par_region": list(
+            Patrimoine.objects.values("id_commune__id_province__id_region__nom_region")
+            .annotate(total=Count("id_patrimoine"))
+            .order_by("id_commune__id_province__id_region__nom_region")
+        ),
+    }
+
+    terms = _chatbot_search_terms(message)
+    query = Q()
+    for term in terms:
+        query |= (
+            Q(nom_fr__icontains=term)
+            | Q(nom_ar__icontains=term)
+            | Q(description__icontains=term)
+            | Q(type_patrimoine__icontains=term)
+            | Q(statut__icontains=term)
+            | Q(id_commune__nom_commune__icontains=term)
+            | Q(id_commune__id_province__nom_province__icontains=term)
+            | Q(id_commune__id_province__id_region__nom_region__icontains=term)
+        )
+
+    patrimoines = Patrimoine.objects.select_related(
+        "id_commune__id_province__id_region"
+    )
+    if query:
+        patrimoines = patrimoines.filter(query)
+    patrimoines = patrimoines.order_by("nom_fr")[:12]
+
+    items = []
+    for patrimoine in patrimoines:
+        commune = patrimoine.id_commune
+        province = commune.id_province if commune else None
+        region = province.id_region if province else None
+        centroid = None
+        if patrimoine.centroid_geom:
+            centroid = {
+                "lat": patrimoine.centroid_geom.y,
+                "lng": patrimoine.centroid_geom.x,
+            }
+        items.append(
+            {
+                "nom_fr": patrimoine.nom_fr,
+                "nom_ar": patrimoine.nom_ar,
+                "description": patrimoine.description,
+                "type": patrimoine.get_type_patrimoine_display(),
+                "statut": patrimoine.get_statut_display(),
+                "region": region.nom_region if region else "",
+                "province": province.nom_province if province else "",
+                "commune": commune.nom_commune if commune else "",
+                "centroid": centroid,
+            }
+        )
+
+    return {"stats": stats, "resultats_publics": items}
+
+
+def _groq_chat(message, context):
+    payload = {
+        "model": settings.GROQ_MODEL,
+        "messages": [
+            {"role": "system", "content": CHATBOT_SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": (
+                    "Question utilisateur:\n"
+                    f"{message}\n\n"
+                    "Contexte public autorisé depuis la base de données:\n"
+                    f"{json.dumps(context, ensure_ascii=False, default=str)}"
+                ),
+            },
+        ],
+        "temperature": 0.2,
+        "max_completion_tokens": 700,
+    }
+    request = Request(
+        settings.GROQ_API_URL,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {settings.GROQ_API_KEY}",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "GeoPatrimoineHub/1.0",
+        },
+        method="POST",
+    )
+    with urlopen(request, timeout=30) as response:
+        data = json.loads(response.read().decode("utf-8"))
+    return data["choices"][0]["message"]["content"].strip()
+
+
+@require_POST
+def chatbot_api(request):
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "Requête invalide."}, status=400)
+
+    message = str(payload.get("message", "")).strip()
+    if not message:
+        return JsonResponse({"error": "Écrivez une question."}, status=400)
+    if len(message) > 800:
+        return JsonResponse({"error": "Question trop longue."}, status=400)
+
+    if _chatbot_private_request(message):
+        return JsonResponse(
+            {
+                "answer": (
+                    "Je ne peux pas fournir d'informations privées ou internes. "
+                    "Je peux vous aider avec les données publiques des patrimoines, "
+                    "les régions, les types, les statuts et les statistiques générales."
+                )
+            }
+        )
+
+    try:
+        context = _public_patrimoine_context(message)
+    except DatabaseError:
+        logger.exception("Unable to build public chatbot context")
+        return JsonResponse(
+            {"answer": "Je n'arrive pas à consulter la base de données pour le moment."},
+            status=503,
+        )
+
+    if not settings.GROQ_API_KEY:
+        return JsonResponse(
+            {
+                "answer": (
+                    "Le chatbot IA n'est pas encore configuré. Ajoutez GROQ_API_KEY "
+                    "dans .env, puis redémarrez le service web."
+                )
+            },
+            status=503,
+        )
+
+    try:
+        answer = _groq_chat(message, context)
+    except HTTPError as exc:
+        logger.exception("Groq API HTTP error: %s", exc)
+        return JsonResponse(
+            {"answer": "Groq a refusé la requête. Vérifiez la clé API et le modèle."},
+            status=502,
+        )
+    except (URLError, TimeoutError, KeyError, json.JSONDecodeError):
+        logger.exception("Groq API request failed")
+        return JsonResponse(
+            {"answer": "Le service IA est momentanément indisponible."},
+            status=502,
+        )
+
+    return JsonResponse({"answer": answer})
 
 
 def _dashboard_context(user):

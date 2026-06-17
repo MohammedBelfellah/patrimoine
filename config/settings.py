@@ -37,6 +37,12 @@ if railway_public_domain:
 
 # Keep the list stable and avoid duplicates when both env vars include the same domain.
 CSRF_TRUSTED_ORIGINS = sorted(set(CSRF_TRUSTED_ORIGINS))
+APP_BASE_URL = os.getenv("APP_BASE_URL", "").strip().rstrip("/")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+GROQ_API_URL = os.getenv(
+    "GROQ_API_URL", "https://api.groq.com/openai/v1/chat/completions"
+).strip()
 
 # Public feedback (Google Form). Override with env; set to false/0/off to hide the navbar button.
 _feedback_raw = os.getenv(
@@ -223,8 +229,9 @@ EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "1") == "1"
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv(
-    "DEFAULT_FROM_EMAIL", "Patrimoine <noreply@belfellah.space>"
+    "DEFAULT_FROM_EMAIL", "Geo Patrimoine Hub <noreply@geopatrimoinehub.com>"
 )
+SERVER_EMAIL = os.getenv("SERVER_EMAIL", "noreply@geopatrimoinehub.com")
 
 # Railway/Reverse proxies forward scheme in this header.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

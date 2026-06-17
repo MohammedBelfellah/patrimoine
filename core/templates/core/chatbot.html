@@ -1,0 +1,203 @@
+{% extends "core/base.html" %}
+{% block title %}Assistant - Geo Patrimoine Hub{% endblock %}
+
+{% block head_extra %}
+<style>
+  .chat-shell {
+    min-height: calc(100vh - 180px);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 14px;
+  }
+
+  .chat-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .chat-title {
+    margin: 0;
+    color: var(--ink);
+    font-size: 1.35rem;
+  }
+
+  .chat-status {
+    font-size: .9rem;
+    color: #166534;
+    background: #dcfce7;
+    border: 1px solid #86efac;
+    border-radius: 999px;
+    padding: 6px 10px;
+    white-space: nowrap;
+  }
+
+  .chat-status.off {
+    color: #92400e;
+    background: #fef3c7;
+    border-color: #fbbf24;
+  }
+
+  .chat-messages {
+    background: #fff;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 8px;
+    padding: 16px;
+    overflow-y: auto;
+    min-height: 420px;
+    max-height: 62vh;
+  }
+
+  .message {
+    max-width: 820px;
+    margin-bottom: 12px;
+    padding: 11px 13px;
+    border-radius: 8px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+  }
+
+  .message.bot {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+  }
+
+  .message.user {
+    background: #16423c;
+    color: #fff;
+    margin-left: auto;
+  }
+
+  .chat-form {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: start;
+  }
+
+  .chat-form textarea {
+    min-height: 54px;
+    resize: vertical;
+    margin-bottom: 0;
+  }
+
+  .chat-form button {
+    min-height: 54px;
+    border-radius: 8px;
+  }
+
+  .quick-prompts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .quick-prompts button {
+    background: #fff !important;
+    color: #16423c !important;
+    border: 1px solid rgba(22, 66, 60, 0.25) !important;
+    border-radius: 999px !important;
+    padding: 7px 11px !important;
+    font-size: .92rem;
+  }
+
+  @media (max-width: 640px) {
+    .chat-header,
+    .chat-form {
+      grid-template-columns: 1fr;
+      display: grid;
+    }
+
+    .chat-status {
+      justify-self: start;
+      white-space: normal;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-card chat-shell">
+  <div class="chat-header">
+    <h1 class="chat-title"><i class="bi bi-chat-dots"></i> Assistant public</h1>
+    <span class="chat-status {% if not groq_configured %}off{% endif %}">
+      {% if groq_configured %}IA connectée{% else %}Clé Groq manquante{% endif %}
+    </span>
+  </div>
+
+  <div id="chatMessages" class="chat-messages" aria-live="polite">
+    <div class="message bot">Bonjour. Je peux répondre aux questions publiques sur les patrimoines, les régions, les types, les statuts et les statistiques générales.</div>
+  </div>
+
+  <div>
+    <form id="chatForm" class="chat-form">
+      {% csrf_token %}
+      <textarea id="chatInput" maxlength="800" placeholder="Posez une question sur le patrimoine..." required></textarea>
+      <button id="chatSubmit" type="submit"><i class="bi bi-send"></i> Envoyer</button>
+    </form>
+    <div class="quick-prompts" aria-label="Exemples">
+      <button type="button" data-prompt="Combien de patrimoines sont enregistrés ?">Total patrimoines</button>
+      <button type="button" data-prompt="Quels sont les patrimoines naturels ?">Patrimoines naturels</button>
+      <button type="button" data-prompt="Donne-moi les patrimoines par région.">Par région</button>
+      <button type="button" data-prompt="Explique les différents statuts des patrimoines.">Statuts</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const form = document.getElementById('chatForm');
+  const input = document.getElementById('chatInput');
+  const submit = document.getElementById('chatSubmit');
+  const messages = document.getElementById('chatMessages');
+
+  function addMessage(text, type) {
+    const el = document.createElement('div');
+    el.className = `message ${type}`;
+    el.textContent = text;
+    messages.appendChild(el);
+    messages.scrollTop = messages.scrollHeight;
+    return el;
+  }
+
+  async function askBot(message) {
+    submit.disabled = true;
+    const waiting = addMessage('Réponse en cours...', 'bot');
+    try {
+      const response = await fetch('{% url "chatbot-api" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        body: JSON.stringify({ message }),
+      });
+      const data = await response.json();
+      waiting.textContent = data.answer || data.error || 'Aucune réponse disponible.';
+    } catch (error) {
+      waiting.textContent = "Le chatbot n'est pas joignable pour le moment.";
+    } finally {
+      submit.disabled = false;
+      input.focus();
+    }
+  }
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const message = input.value.trim();
+    if (!message) return;
+    addMessage(message, 'user');
+    input.value = '';
+    askBot(message);
+  });
+
+  document.querySelectorAll('[data-prompt]').forEach((button) => {
+    button.addEventListener('click', () => {
+      input.value = button.dataset.prompt;
+      form.requestSubmit();
+    });
+  });
+</script>
+{% endblock %}

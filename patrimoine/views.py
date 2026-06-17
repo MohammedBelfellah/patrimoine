@@ -141,16 +141,23 @@ def _dashboard_url_for_role(role):
     return reverse("dashboard-public")
 
 
+def _absolute_app_url(request, path):
+    base_url = getattr(settings, "APP_BASE_URL", "").strip().rstrip("/")
+    if base_url:
+        return f"{base_url}{path if path.startswith('/') else '/' + path}"
+    return request.build_absolute_uri(path)
+
+
 def _send_welcome_user_email(request, user, raw_password, role):
-    login_url = request.build_absolute_uri(reverse("login"))
-    dashboard_url = request.build_absolute_uri(_dashboard_url_for_role(role))
+    login_url = _absolute_app_url(request, reverse("login"))
+    dashboard_url = _absolute_app_url(request, _dashboard_url_for_role(role))
     role_label = role.capitalize()
 
-    subject = "Bienvenue sur Patrimoine"
+    subject = "Bienvenue sur Geo Patrimoine Hub"
     text_message = f"""
 Bonjour {user.username},
 
-Votre compte a été créé avec succès sur la plateforme Patrimoine.
+Votre compte a été créé avec succès sur la plateforme Geo Patrimoine Hub.
 
 Rôle : {role_label}
 Email : {user.email}
@@ -161,13 +168,13 @@ Accédez à votre espace : {dashboard_url}
 Connexion : {login_url}
 
 Merci,
-L’équipe Patrimoine
+L’équipe Geo Patrimoine Hub
 """
     html_message = f"""
 <div style='font-family:Arial,sans-serif;max-width:520px;margin:0 auto;'>
-  <h2 style='color:#2563eb;'>Bienvenue sur <span style='color:#0f172a;'>Patrimoine</span></h2>
+  <h2 style='color:#2563eb;'>Bienvenue sur <span style='color:#0f172a;'>Geo Patrimoine Hub</span></h2>
   <p>Bonjour <b>{user.username}</b>,</p>
-  <p>Votre compte a été créé avec succès sur la plateforme <b>Patrimoine</b>.</p>
+  <p>Votre compte a été créé avec succès sur la plateforme <b>Geo Patrimoine Hub</b>.</p>
   <ul style='background:#f1f5f9;padding:14px 18px;border-radius:8px;'>
     <li><b>Rôle :</b> {role_label}</li>
     <li><b>Email :</b> {user.email}</li>
@@ -176,7 +183,7 @@ L’équipe Patrimoine
   </ul>
   <p>Accédez à votre espace : <a href='{dashboard_url}' style='color:#2563eb;'>Tableau de bord</a></p>
   <p>Connexion : <a href='{login_url}' style='color:#2563eb;'>{login_url}</a></p>
-  <p style='margin-top:18px;font-size:13px;color:#64748b;'>Merci,<br>L’équipe Patrimoine</p>
+  <p style='margin-top:18px;font-size:13px;color:#64748b;'>Merci,<br>L’équipe Geo Patrimoine Hub</p>
 </div>
 """
     msg = EmailMultiAlternatives(
@@ -192,15 +199,15 @@ L’équipe Patrimoine
 def _send_user_updated_email(
     request, user, old_email, old_username, role, raw_password=None
 ):
-    login_url = request.build_absolute_uri(reverse("login"))
-    dashboard_url = request.build_absolute_uri(_dashboard_url_for_role(role))
+    login_url = _absolute_app_url(request, reverse("login"))
+    dashboard_url = _absolute_app_url(request, _dashboard_url_for_role(role))
     role_label = role.capitalize()
 
-    subject = "Mise à jour de votre compte Patrimoine"
+    subject = "Mise à jour de votre compte Geo Patrimoine Hub"
     text_message = f"""
 Bonjour {user.username},
 
-Votre compte Patrimoine a été mis à jour par le Superadmin.
+Votre compte Geo Patrimoine Hub a été mis à jour par le Superadmin.
 
 Nouveau rôle : {role_label}
 Email : {user.email}
@@ -210,11 +217,11 @@ Nom d'utilisateur : {user.username}
         text_message += f"\nNouveau mot de passe provisoire : {raw_password}\n(Changez-le après connexion.)\n"
     if old_email != user.email or old_username != user.username:
         text_message += f"\nAnciennes informations :\n- Ancien email : {old_email}\n- Ancien nom d'utilisateur : {old_username}\n"
-    text_message += f"\nConnexion : {login_url}\nTableau de bord : {dashboard_url}\n\nMerci,\nL’équipe Patrimoine"
+    text_message += f"\nConnexion : {login_url}\nTableau de bord : {dashboard_url}\n\nMerci,\nL’équipe Geo Patrimoine Hub"
 
     html_message = f"""
 <div style='font-family:Arial,sans-serif;max-width:520px;margin:0 auto;'>
-  <h2 style='color:#2563eb;'>Mise à jour de votre <span style='color:#0f172a;'>compte Patrimoine</span></h2>
+  <h2 style='color:#2563eb;'>Mise à jour de votre <span style='color:#0f172a;'>compte Geo Patrimoine Hub</span></h2>
   <p>Bonjour <b>{user.username}</b>,</p>
   <p>Votre compte a été mis à jour par le Superadmin.</p>
   <ul style='background:#f1f5f9;padding:14px 18px;border-radius:8px;'>
@@ -226,7 +233,7 @@ Nom d'utilisateur : {user.username}
   {f"<p style='font-size:13px;color:#64748b;'>Ancien email : {old_email}<br>Ancien nom d'utilisateur : {old_username}</p>" if (old_email != user.email or old_username != user.username) else ""}
   <p>Connexion : <a href='{login_url}' style='color:#2563eb;'>{login_url}</a></p>
   <p>Tableau de bord : <a href='{dashboard_url}' style='color:#2563eb;'>{dashboard_url}</a></p>
-  <p style='margin-top:18px;font-size:13px;color:#64748b;'>Merci,<br>L’équipe Patrimoine</p>
+  <p style='margin-top:18px;font-size:13px;color:#64748b;'>Merci,<br>L’équipe Geo Patrimoine Hub</p>
 </div>
 """
     recipients = [user.email]

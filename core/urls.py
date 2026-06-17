@@ -5,6 +5,8 @@ from patrimoine import views as pat_views
 
 urlpatterns = [
     path("", views.public_map_view, name="public-map"),
+    path("chatbot/", views.chatbot_view, name="chatbot"),
+    path("api/chatbot/", views.chatbot_api, name="chatbot-api"),
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
     path("dashboard/", views.dashboard_router_view, name="dashboard"),

@@ -296,7 +296,9 @@
                 <div class="sidebar-title">Données Principales</div>
                 <a class="sidebar-link {% if request.path == patrimoine_list_url %}active{% endif %}" href="{{ patrimoine_list_url }}"><i class="bi bi-buildings"></i> Patrimoines</a>
                 <a class="sidebar-link {% if request.path == inspection_list_url %}active{% endif %}" href="{{ inspection_list_url }}"><i class="bi bi-clipboard-check"></i> Inspections</a>
+                {% if user.is_staff or user.is_superuser %}
                 <a class="sidebar-link {% if request.path == intervention_list_url %}active{% endif %}" href="{{ intervention_list_url }}"><i class="bi bi-tools"></i> Interventions</a>
+                {% endif %}
                 <a class="sidebar-link {% if request.path == document_list_url %}active{% endif %}" href="{{ document_list_url }}"><i class="bi bi-file-earmark-medical"></i> Documents</a>
 
                 <div class="sidebar-title">Navigation rapide</div>

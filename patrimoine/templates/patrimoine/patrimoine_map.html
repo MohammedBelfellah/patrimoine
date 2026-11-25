@@ -23,12 +23,15 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+{{ carto_basemap_api_key|json_script:"carto-basemap-api-key" }}
 <script>
   const map = L.map('map').setView([31.7917, -7.0926], 6);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+  const cartoBasemapApiKey = JSON.parse(document.getElementById('carto-basemap-api-key').textContent);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png?key=' + encodeURIComponent(cartoBasemapApiKey), {
     maxZoom: 20,
     subdomains: 'abcd',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    referrerPolicy: 'strict-origin-when-cross-origin',
   }).addTo(map);
 
   const typeColors = {

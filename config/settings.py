@@ -95,6 +95,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "core.context_processors.feedback_form",
+                "core.context_processors.carto_basemap_api_key",
             ],
         },
     },

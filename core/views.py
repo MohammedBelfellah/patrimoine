@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import re
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -185,7 +184,6 @@ def public_map_view(request):
 
     context = {
         "patrimoines_json": json.dumps(data),
-        "carto_basemap_api_key": os.environ.get("CARTO_BASEMAP_API_KEY", ""),
         "regions": regions,
         "patrimoine_types": Patrimoine.PATRIMOINE_TYPES,
         "patrimoine_statuts": Patrimoine.PATRIMOINE_STATUTS,

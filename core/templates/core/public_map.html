@@ -293,13 +293,16 @@
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/leaflet-image/leaflet-image.js"></script>
+{{ carto_basemap_api_key|json_script:"carto-basemap-api-key" }}
 <script>
   const map = L.map('map', { zoomControl: true }).setView([31.7917, -7.0926], 6);
+  const cartoBasemapApiKey = JSON.parse(document.getElementById('carto-basemap-api-key').textContent);
   /* CARTO basemaps (OSM data) — avoid tile.openstreetmap.org 403s in production (OSM tile policy / Referer). */
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png?key=' + encodeURIComponent(cartoBasemapApiKey), {
     maxZoom: 20,
     subdomains: 'abcd',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    referrerPolicy: 'strict-origin-when-cross-origin',
   }).addTo(map);
   L.control.scale({ imperial: false }).addTo(map);
 
